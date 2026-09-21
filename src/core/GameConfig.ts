@@ -29,11 +29,10 @@ export interface PlayerConfig {
   readonly color: Color3;
 }
 
-export interface ObstacleConfig {
-  /** Сторона основания: куб квадратный в плане. */
-  readonly size: number;
-  /** Высота — вдвое больше стороны основания. */
+export interface WallConfig {
+  readonly width: number;
   readonly height: number;
+  readonly depth: number;
   readonly color: Color3;
   readonly x: number;
   readonly z: number;
@@ -46,7 +45,7 @@ export interface SceneConfig {
   readonly light: LightConfig;
   readonly ground: GroundConfig;
   readonly player: PlayerConfig;
-  readonly obstacle: ObstacleConfig;
+  readonly wall: WallConfig;
 }
 
 /** Единственный источник констант сцены: в коде «магических» чисел быть не должно. */
@@ -77,9 +76,10 @@ export const GameConfig: SceneConfig = {
     spawn: new Vector3(0, 1, 0),
     color: new Color3(0.35, 0.62, 0.95),
   },
-  obstacle: {
-    size: 1.5,
+  wall: {
+    width: 6,
     height: 3,
+    depth: 0.6,
     color: new Color3(0.78, 0.35, 0.28),
     x: 0,
     z: 6,

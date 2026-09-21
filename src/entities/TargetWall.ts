@@ -5,19 +5,19 @@ import type { Scene } from "@babylonjs/core/scene";
 
 import { GameConfig } from "../core/GameConfig";
 
-/** Препятствие: вытянутый вверх куб. Владеет своим мешем и материалом. */
-export class Obstacle {
+/** Стена-мишень: неподвижная плита, в которую бьёт персонаж. Владеет своим мешем и материалом. */
+export class TargetWall {
   private readonly mesh: Mesh;
   private readonly material: StandardMaterial;
 
   public constructor(scene: Scene) {
-    const { size, height, color, x, z } = GameConfig.obstacle;
+    const { width, height, depth, color, x, z } = GameConfig.wall;
 
-    this.mesh = CreateBox("obstacle", { width: size, height, depth: size }, scene);
+    this.mesh = CreateBox("target-wall", { width, height, depth }, scene);
     this.mesh.position.set(x, height / 2, z);
     this.mesh.freezeWorldMatrix();
 
-    this.material = new StandardMaterial("obstacle-material", scene);
+    this.material = new StandardMaterial("target-wall-material", scene);
     this.material.diffuseColor = color;
     this.material.specularColor.setAll(0.05);
     this.mesh.material = this.material;
