@@ -8,11 +8,12 @@ import type { Scene } from "@babylonjs/core/scene";
 
 import { GameConfig } from "../core/GameConfig";
 
-/** Персонаж: капсула с собственным материалом. Владеет своим мешем, движение — дело контроллера. */
+/** Персонаж: капсула с телом Havok. Контроллеры двигают его только через методы. */
 export class Player {
   private readonly mesh: Mesh;
   private readonly material: StandardMaterial;
   private readonly aggregate: PhysicsAggregate;
+  private readonly velocity = new Vector3();
 
   public constructor(scene: Scene) {
     const { height, radius, spawn, color } = GameConfig.player;
@@ -35,12 +36,22 @@ export class Player {
     this.aggregate.body.setMassProperties({ inertia: Vector3.ZeroReadOnly });
   }
 
-  public get body(): PhysicsAggregate {
-    return this.aggregate;
-  }
-
   public get transform(): Mesh {
     return this.mesh;
+  }
+
+  public get position(): Vector3 {
+    return this.mesh.position;
+  }
+
+  /** Горизонтальная скорость по направлению ввода; вертикальную оставляем гравитации. */
+  public move(direction: Vector3): void {
+    const body = this.aggregate.body;
+
+    body.getLinearVelocityToRef(this.velocity);
+    this.velocity.x = direction.x * GameConfig.player.speed;
+    this.velocity.z = direction.z * GameConfig.player.speed;
+    body.setLinearVelocity(this.velocity);
   }
 
   /** Возврат в точку старта: тело телепортируется и теряет накопленную скорость. */

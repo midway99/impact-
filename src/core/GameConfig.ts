@@ -50,6 +50,25 @@ export interface WallConfig {
   readonly body: BodyConfig;
 }
 
+export interface ThrowableConfig {
+  readonly size: number;
+  readonly color: Color3;
+  /** Сколько кубов одновременно в мире; при превышении переиспользуется самый старый. */
+  readonly poolSize: number;
+  /** Горизонтальная скорость броска, м/с. */
+  readonly speed: number;
+  /** Вертикальная скорость броска, м/с: даёт дугу. */
+  readonly lift: number;
+  /** Пауза между бросками, с. */
+  readonly cooldown: number;
+  /** Точка вылета: вперёд от центра персонажа и вверх, м. */
+  readonly spawnForward: number;
+  readonly spawnHeight: number;
+  /** Где лежат неиспользуемые кубы пула. */
+  readonly parkPosition: Vector3;
+  readonly body: BodyConfig;
+}
+
 export interface SceneConfig {
   readonly clearColor: Color3;
   readonly gravity: Vector3;
@@ -58,6 +77,7 @@ export interface SceneConfig {
   readonly ground: GroundConfig;
   readonly player: PlayerConfig;
   readonly wall: WallConfig;
+  readonly throwable: ThrowableConfig;
 }
 
 /** Единственный источник констант сцены: в коде «магических» чисел быть не должно. */
@@ -99,5 +119,17 @@ export const GameConfig: SceneConfig = {
     x: 0,
     z: 6,
     body: { mass: 6, friction: 0.5, restitution: 0.1 },
+  },
+  throwable: {
+    size: 0.5,
+    color: new Color3(0.95, 0.78, 0.3),
+    poolSize: 12,
+    speed: 16,
+    lift: 3,
+    cooldown: 0.2,
+    spawnForward: 1.1,
+    spawnHeight: 0.5,
+    parkPosition: new Vector3(0, -50, 0),
+    body: { mass: 1, friction: 0.6, restitution: 0.2 },
   },
 };
