@@ -63,10 +63,10 @@ export const GameConfig: SceneConfig = {
     target: new Vector3(0, 1, 0),
   },
   light: {
-    direction: new Vector3(-0.4, -1, -0.6),
+    direction: new Vector3(-0.45, -1, 0.6),
     intensity: 1.1,
     ambientDirection: new Vector3(0, 1, 0),
-    ambientIntensity: 0.35,
+    ambientIntensity: 0.5,
   },
   ground: {
     size: 40,
