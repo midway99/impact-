@@ -1,6 +1,7 @@
 import { Engine } from "@babylonjs/core/Engines/engine";
 import { Scene } from "@babylonjs/core/scene";
 
+import { ObstacleField } from "../entities/ObstacleField";
 import { Player } from "../entities/Player";
 import { Arena } from "../scene/Arena";
 import { GameConfig } from "./GameConfig";
@@ -11,6 +12,7 @@ export class Game {
   private readonly scene: Scene;
   private readonly arena: Arena;
   private readonly player: Player;
+  private readonly obstacles: ObstacleField;
 
   /** Колбэки создаются один раз: в кадре не должно появляться новых замыканий. */
   private readonly renderFrame = (): void => this.scene.render();
@@ -25,6 +27,7 @@ export class Game {
 
     this.arena = new Arena(this.scene, canvas);
     this.player = new Player(this.scene);
+    this.obstacles = new ObstacleField(this.scene);
   }
 
   public start(): void {
@@ -35,6 +38,7 @@ export class Game {
   public dispose(): void {
     window.removeEventListener("resize", this.handleResize);
     this.engine.stopRenderLoop(this.renderFrame);
+    this.obstacles.dispose();
     this.player.dispose();
     this.arena.dispose();
     this.scene.dispose();

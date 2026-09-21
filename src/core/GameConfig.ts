@@ -29,6 +29,17 @@ export interface PlayerConfig {
   readonly color: Color3;
 }
 
+export interface ObstacleConfig {
+  readonly size: number;
+  readonly color: Color3;
+  readonly rows: number;
+  readonly columns: number;
+  readonly spacingX: number;
+  readonly spacingZ: number;
+  readonly firstRowZ: number;
+  readonly rowOffsetX: number;
+}
+
 export interface SceneConfig {
   readonly clearColor: Color3;
   readonly gravity: Vector3;
@@ -36,6 +47,7 @@ export interface SceneConfig {
   readonly light: LightConfig;
   readonly ground: GroundConfig;
   readonly player: PlayerConfig;
+  readonly obstacles: ObstacleConfig;
 }
 
 /** Единственный источник констант сцены: в коде «магических» чисел быть не должно. */
@@ -65,5 +77,15 @@ export const GameConfig: SceneConfig = {
     radius: 0.5,
     spawn: new Vector3(0, 1, 0),
     color: new Color3(0.35, 0.62, 0.95),
+  },
+  obstacles: {
+    size: 1.5,
+    color: new Color3(0.78, 0.35, 0.28),
+    rows: 4,
+    columns: 5,
+    spacingX: 3.5,
+    spacingZ: 4,
+    firstRowZ: 5,
+    rowOffsetX: 1.75,
   },
 };
