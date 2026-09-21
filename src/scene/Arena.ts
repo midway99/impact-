@@ -4,6 +4,8 @@ import { HemisphericLight } from "@babylonjs/core/Lights/hemisphericLight";
 import { StandardMaterial } from "@babylonjs/core/Materials/standardMaterial";
 import { CreateGround } from "@babylonjs/core/Meshes/Builders/groundBuilder";
 import type { Mesh } from "@babylonjs/core/Meshes/mesh";
+import { PhysicsAggregate } from "@babylonjs/core/Physics/v2/physicsAggregate";
+import { PhysicsShapeType } from "@babylonjs/core/Physics/v2/IPhysicsEnginePlugin";
 import type { Scene } from "@babylonjs/core/scene";
 
 import { GameConfig } from "../core/GameConfig";
@@ -14,6 +16,7 @@ export class Arena {
   private readonly sun: DirectionalLight;
   private readonly ambient: HemisphericLight;
   private readonly ground: Mesh;
+  private readonly groundBody: PhysicsAggregate;
 
   public constructor(scene: Scene, canvas: HTMLCanvasElement) {
     const { camera, light, ground } = GameConfig;
@@ -43,6 +46,9 @@ export class Arena {
     groundMaterial.diffuseColor = ground.color;
     groundMaterial.specularColor.setAll(0);
     this.ground.material = groundMaterial;
+
+    // BodyConfig совпадает по форме с параметрами агрегата — параметры не дублируем.
+    this.groundBody = new PhysicsAggregate(this.ground, PhysicsShapeType.BOX, ground.body, scene);
   }
 
   public get groundMesh(): Mesh {
@@ -50,6 +56,7 @@ export class Arena {
   }
 
   public dispose(): void {
+    this.groundBody.dispose();
     this.ground.material?.dispose();
     this.ground.dispose();
     this.ambient.dispose();

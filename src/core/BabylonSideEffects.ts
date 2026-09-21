@@ -9,6 +9,9 @@
  * Модуль импортируется первым в main.ts. Новую ловушку добавлять сюда, а не по месту.
  */
 
+// scene.enablePhysics и физика Physics V2
+import "@babylonjs/core/Physics/joinedPhysicsEngineComponent";
+
 // Шейдеры StandardMaterial (GLSL для WebGL2 и WGSL для WebGPU)
 import "@babylonjs/core/Shaders/default.vertex";
 import "@babylonjs/core/Shaders/default.fragment";

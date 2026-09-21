@@ -1,6 +1,9 @@
 import { StandardMaterial } from "@babylonjs/core/Materials/standardMaterial";
 import { CreateCapsule } from "@babylonjs/core/Meshes/Builders/capsuleBuilder";
+import { Vector3 } from "@babylonjs/core/Maths/math.vector";
 import type { Mesh } from "@babylonjs/core/Meshes/mesh";
+import { PhysicsAggregate } from "@babylonjs/core/Physics/v2/physicsAggregate";
+import { PhysicsShapeType } from "@babylonjs/core/Physics/v2/IPhysicsEnginePlugin";
 import type { Scene } from "@babylonjs/core/scene";
 
 import { GameConfig } from "../core/GameConfig";
@@ -9,6 +12,7 @@ import { GameConfig } from "../core/GameConfig";
 export class Player {
   private readonly mesh: Mesh;
   private readonly material: StandardMaterial;
+  private readonly aggregate: PhysicsAggregate;
 
   public constructor(scene: Scene) {
     const { height, radius, spawn, color } = GameConfig.player;
@@ -20,19 +24,35 @@ export class Player {
     this.material.diffuseColor = color;
     this.material.specularColor.setAll(0.1);
     this.mesh.material = this.material;
+
+    this.aggregate = new PhysicsAggregate(
+      this.mesh,
+      PhysicsShapeType.CAPSULE,
+      GameConfig.player.body,
+      scene,
+    );
+    // Нулевой момент инерции: персонаж не заваливается набок и стоит вертикально.
+    this.aggregate.body.setMassProperties({ inertia: Vector3.ZeroReadOnly });
+  }
+
+  public get body(): PhysicsAggregate {
+    return this.aggregate;
   }
 
   public get transform(): Mesh {
     return this.mesh;
   }
 
-  /** Возврат в точку старта без аллокаций: значения копируются в существующие вектора. */
+  /** Возврат в точку старта: тело телепортируется и теряет накопленную скорость. */
   public reset(): void {
     this.mesh.position.copyFrom(GameConfig.player.spawn);
     this.mesh.rotationQuaternion?.set(0, 0, 0, 1);
+    this.aggregate.body.setLinearVelocity(Vector3.ZeroReadOnly);
+    this.aggregate.body.setAngularVelocity(Vector3.ZeroReadOnly);
   }
 
   public dispose(): void {
+    this.aggregate.dispose();
     this.material.dispose();
     this.mesh.dispose();
   }

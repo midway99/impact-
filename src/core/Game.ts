@@ -1,4 +1,5 @@
 import { Engine } from "@babylonjs/core/Engines/engine";
+import type { HavokPlugin } from "@babylonjs/core/Physics/v2/Plugins/havokPlugin";
 import { Scene } from "@babylonjs/core/scene";
 
 import { TargetWall } from "../entities/TargetWall";
@@ -18,12 +19,14 @@ export class Game {
   private readonly renderFrame = (): void => this.scene.render();
   private readonly handleResize = (): void => this.engine.resize();
 
-  public constructor(canvas: HTMLCanvasElement) {
+  public constructor(canvas: HTMLCanvasElement, physics: HavokPlugin) {
     this.engine = new Engine(canvas, true, { stencil: true }, true);
 
     this.scene = new Scene(this.engine);
     this.scene.clearColor = GameConfig.clearColor.toColor4(1);
     this.scene.gravity.copyFrom(GameConfig.gravity);
+    // Физику включаем до создания сущностей: их тела добавляются в уже готовый мир.
+    this.scene.enablePhysics(GameConfig.gravity, physics);
 
     this.arena = new Arena(this.scene, canvas);
     this.player = new Player(this.scene);

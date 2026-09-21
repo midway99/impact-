@@ -17,9 +17,17 @@ export interface LightConfig {
   readonly ambientIntensity: number;
 }
 
+/** Параметры физического тела. mass = 0 — статичное тело. */
+export interface BodyConfig {
+  readonly mass: number;
+  readonly friction: number;
+  readonly restitution: number;
+}
+
 export interface GroundConfig {
   readonly size: number;
   readonly color: Color3;
+  readonly body: BodyConfig;
 }
 
 export interface PlayerConfig {
@@ -27,6 +35,7 @@ export interface PlayerConfig {
   readonly radius: number;
   readonly spawn: Vector3;
   readonly color: Color3;
+  readonly body: BodyConfig;
 }
 
 export interface WallConfig {
@@ -36,6 +45,7 @@ export interface WallConfig {
   readonly color: Color3;
   readonly x: number;
   readonly z: number;
+  readonly body: BodyConfig;
 }
 
 export interface SceneConfig {
@@ -69,19 +79,22 @@ export const GameConfig: SceneConfig = {
   ground: {
     size: 40,
     color: new Color3(0.18, 0.2, 0.24),
+    body: { mass: 0, friction: 0.8, restitution: 0 },
   },
   player: {
     height: 2,
     radius: 0.5,
-    spawn: new Vector3(0, 1, 0),
+    spawn: new Vector3(-5, 1, 0),
     color: new Color3(0.35, 0.62, 0.95),
+    body: { mass: 5, friction: 0.6, restitution: 0.05 },
   },
   wall: {
-    width: 6,
+    width: 16,
     height: 3,
-    depth: 0.6,
+    depth: 2,
     color: new Color3(0.78, 0.35, 0.28),
     x: 0,
     z: 6,
+    body: { mass: 6, friction: 0.5, restitution: 0.1 },
   },
 };
