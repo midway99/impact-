@@ -9,6 +9,7 @@ import { PhysicsShapeType } from "@babylonjs/core/Physics/v2/IPhysicsEnginePlugi
 import type { Scene } from "@babylonjs/core/scene";
 
 import { GameConfig } from "../core/GameConfig";
+import { CollisionGroup } from "../physics/CollisionGroup";
 
 /** Окружение сцены: камера, свет и пол. Игровых сущностей не знает. */
 export class Arena {
@@ -49,6 +50,7 @@ export class Arena {
 
     // BodyConfig совпадает по форме с параметрами агрегата — параметры не дублируем.
     this.groundBody = new PhysicsAggregate(this.ground, PhysicsShapeType.BOX, ground.body, scene);
+    this.groundBody.shape.filterMembershipMask = CollisionGroup.Ground;
   }
 
   public get viewCamera(): ArcRotateCamera {

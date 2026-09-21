@@ -64,8 +64,6 @@ export interface ThrowableConfig {
   /** Точка вылета: вперёд от центра персонажа и вверх, м. */
   readonly spawnForward: number;
   readonly spawnHeight: number;
-  /** Где лежат неиспользуемые кубы пула. */
-  readonly parkPosition: Vector3;
   readonly body: BodyConfig;
 }
 
@@ -78,9 +76,26 @@ export interface TrajectoryConfig {
   readonly color: Color3;
 }
 
+export interface RopeConfig {
+  readonly segmentCount: number;
+  /** Максимальное расстояние между соседними звеньями, м. Длина верёвки: (segmentCount + 1) * segmentLength. */
+  readonly segmentLength: number;
+  /** Радиус звена для коллизий, м. */
+  readonly radius: number;
+  /** Толщина отрисовки, м. */
+  readonly thickness: number;
+  readonly segmentMass: number;
+  readonly linearDamping: number;
+  /** Точка крепления на персонаже относительно его центра. */
+  readonly anchorOffset: Vector3;
+  readonly color: Color3;
+}
+
 export interface SceneConfig {
   readonly clearColor: Color3;
   readonly gravity: Vector3;
+  /** Где лежат неиспользуемые физические тела из пулов: статичные, под полом. */
+  readonly parkPosition: Vector3;
   readonly camera: CameraConfig;
   readonly light: LightConfig;
   readonly ground: GroundConfig;
@@ -88,12 +103,14 @@ export interface SceneConfig {
   readonly wall: WallConfig;
   readonly throwable: ThrowableConfig;
   readonly trajectory: TrajectoryConfig;
+  readonly rope: RopeConfig;
 }
 
 /** Единственный источник констант сцены: в коде «магических» чисел быть не должно. */
 export const GameConfig: SceneConfig = {
   clearColor: new Color3(0.043, 0.051, 0.071),
   gravity: new Vector3(0, -9.81, 0),
+  parkPosition: new Vector3(0, -50, 0),
   camera: {
     alpha: -Math.PI / 2,
     beta: Math.PI / 3,
@@ -139,7 +156,6 @@ export const GameConfig: SceneConfig = {
     cooldown: 0.2,
     spawnForward: 1.1,
     spawnHeight: 0.5,
-    parkPosition: new Vector3(0, -50, 0),
     body: { mass: 1, friction: 0.6, restitution: 0.2 },
   },
   trajectory: {
@@ -147,5 +163,15 @@ export const GameConfig: SceneConfig = {
     dotRadius: 0.06,
     timeStep: 0.04,
     color: new Color3(1, 0.9, 0.45),
+  },
+  rope: {
+    segmentCount: 16,
+    segmentLength: 0.45,
+    radius: 0.05,
+    thickness: 0.05,
+    segmentMass: 0.02,
+    linearDamping: 0.3,
+    anchorOffset: new Vector3(0, 0.5, 0),
+    color: new Color3(0.86, 0.76, 0.56),
   },
 };

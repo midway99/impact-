@@ -2,6 +2,7 @@ import { StandardMaterial } from "@babylonjs/core/Materials/standardMaterial";
 import type { Vector3 } from "@babylonjs/core/Maths/math.vector";
 import { CreateBox } from "@babylonjs/core/Meshes/Builders/boxBuilder";
 import type { Mesh } from "@babylonjs/core/Meshes/mesh";
+import type { PhysicsBody } from "@babylonjs/core/Physics/v2/physicsBody";
 import type { HavokPlugin } from "@babylonjs/core/Physics/v2/Plugins/havokPlugin";
 import type { Scene } from "@babylonjs/core/scene";
 
@@ -16,6 +17,7 @@ export class CubePool {
   private readonly source: Mesh;
   private readonly material: StandardMaterial;
   private readonly cubes: readonly ThrowableCube[];
+  private readonly cubeBodies: readonly PhysicsBody[];
   private next = 0;
 
   public constructor(scene: Scene, physics: HavokPlugin) {
@@ -29,16 +31,28 @@ export class CubePool {
     this.source.material = this.material;
 
     const cubes = new Array<ThrowableCube>(poolSize);
+    const bodies = new Array<PhysicsBody>(poolSize);
     for (let i = 0; i < poolSize; i++) {
-      cubes[i] = new ThrowableCube(this.source, i, physics, scene);
+      const cube = new ThrowableCube(this.source, i, physics, scene);
+      cubes[i] = cube;
+      bodies[i] = cube.body;
     }
     this.cubes = cubes;
+    this.cubeBodies = bodies;
   }
 
-  /** Следующий куб по кругу: когда пул исчерпан, переиспользуется самый старый. */
-  public launchNext(position: Vector3, velocity: Vector3): void {
-    this.cubes[this.next]?.launch(position, velocity);
+  /** Тела всех кубов пула — список постоянный, пул не растёт. */
+  public get bodies(): readonly PhysicsBody[] {
+    return this.cubeBodies;
+  }
+
+  /** Следующий куб по кругу: когда пул исчерпан, переиспользуется самый старый. Возвращает его тело. */
+  public launchNext(position: Vector3, velocity: Vector3): PhysicsBody | undefined {
+    const cube = this.cubes[this.next];
     this.next = (this.next + 1) % this.cubes.length;
+    cube?.launch(position, velocity);
+
+    return cube?.body;
   }
 
   public dispose(): void {

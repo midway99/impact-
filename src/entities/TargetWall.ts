@@ -6,6 +6,7 @@ import { PhysicsShapeType } from "@babylonjs/core/Physics/v2/IPhysicsEnginePlugi
 import type { Scene } from "@babylonjs/core/scene";
 
 import { GameConfig } from "../core/GameConfig";
+import { CollisionGroup } from "../physics/CollisionGroup";
 
 /** Стена-мишень: неподвижная плита, в которую бьёт персонаж. Владеет своим мешем и материалом. */
 export class TargetWall {
@@ -26,6 +27,7 @@ export class TargetWall {
 
     // Тело динамическое: стену можно сдвинуть и опрокинуть ударом.
     this.aggregate = new PhysicsAggregate(this.mesh, PhysicsShapeType.BOX, GameConfig.wall.body, scene);
+    this.aggregate.shape.filterMembershipMask = CollisionGroup.Wall;
   }
 
   public get body(): PhysicsAggregate {

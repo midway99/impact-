@@ -3,10 +3,12 @@ import { CreateCapsule } from "@babylonjs/core/Meshes/Builders/capsuleBuilder";
 import { Vector3 } from "@babylonjs/core/Maths/math.vector";
 import type { Mesh } from "@babylonjs/core/Meshes/mesh";
 import { PhysicsAggregate } from "@babylonjs/core/Physics/v2/physicsAggregate";
+import type { PhysicsBody } from "@babylonjs/core/Physics/v2/physicsBody";
 import { PhysicsShapeType } from "@babylonjs/core/Physics/v2/IPhysicsEnginePlugin";
 import type { Scene } from "@babylonjs/core/scene";
 
 import { GameConfig } from "../core/GameConfig";
+import { CollisionGroup } from "../physics/CollisionGroup";
 
 /** Персонаж: капсула с телом Havok. Контроллеры двигают его только через методы. */
 export class Player {
@@ -32,6 +34,7 @@ export class Player {
       GameConfig.player.body,
       scene,
     );
+    this.aggregate.shape.filterMembershipMask = CollisionGroup.Player;
     // Нулевой момент инерции: персонаж не заваливается набок и стоит вертикально.
     this.aggregate.body.setMassProperties({ inertia: Vector3.ZeroReadOnly });
   }
@@ -42,6 +45,11 @@ export class Player {
 
   public get position(): Vector3 {
     return this.mesh.position;
+  }
+
+  /** Тело для соединений с другими сущностями (верёвка). Ввод двигает персонажа только через `move`. */
+  public get physicsBody(): PhysicsBody {
+    return this.aggregate.body;
   }
 
   /** Горизонтальная скорость по направлению ввода; вертикальную оставляем гравитации. */

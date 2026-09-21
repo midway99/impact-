@@ -3,11 +3,13 @@ import { Matrix, Vector3 } from "@babylonjs/core/Maths/math.vector";
 import { CreateSphere } from "@babylonjs/core/Meshes/Builders/sphereBuilder";
 import type { Mesh } from "@babylonjs/core/Meshes/mesh";
 import { PhysicsRaycastResult } from "@babylonjs/core/Physics/physicsRaycastResult";
+import type { IRaycastQuery } from "@babylonjs/core/Physics/physicsRaycastResult";
 import type { HavokPlugin } from "@babylonjs/core/Physics/v2/Plugins/havokPlugin";
 import type { Scene } from "@babylonjs/core/scene";
 
 import { GameConfig } from "../core/GameConfig";
 import type { ThrowAim } from "../input/ThrowAim";
+import { ENVIRONMENT_GROUPS } from "../physics/CollisionGroup";
 
 const MATRIX_SIZE = 16;
 
@@ -23,6 +25,8 @@ export class TrajectoryPreview {
   private readonly matrices: Float32Array;
 
   private readonly hit = new PhysicsRaycastResult();
+  /** Лучи видят только окружение: верёвка, кубы и сам персонаж не обрывают прицел. */
+  private readonly query: IRaycastQuery = { collideWith: ENVIRONMENT_GROUPS };
   private readonly point = new Vector3();
   private readonly previous = new Vector3();
   private readonly transform = new Matrix();
@@ -35,6 +39,8 @@ export class TrajectoryPreview {
 
     this.dot = CreateSphere("trajectory-dot", { diameter: dotRadius * 2, segments: 4 }, scene);
     this.dot.isPickable = false;
+    // Габариты исходной сферы не описывают пунктир — без этого его отсекает frustum culling.
+    this.dot.alwaysSelectAsActiveMesh = true;
 
     // Неосвещённый материал: пунктир одинаково читается и на свету, и в тени.
     this.material = new StandardMaterial("trajectory-material", scene);
@@ -62,7 +68,7 @@ export class TrajectoryPreview {
 
     for (let i = 0; i < dotCount; i++) {
       this.pointAt((i + 1) * timeStep, this.point);
-      this.physics.raycast(this.previous, this.point, this.hit);
+      this.physics.raycast(this.previous, this.point, this.hit, this.query);
 
       if (this.hit.hasHit) {
         // Последняя точка — ровно в месте попадания.

@@ -3,10 +3,13 @@ import type { InstancedMesh } from "@babylonjs/core/Meshes/instancedMesh";
 import type { Mesh } from "@babylonjs/core/Meshes/mesh";
 import { PhysicsMotionType, PhysicsShapeType } from "@babylonjs/core/Physics/v2/IPhysicsEnginePlugin";
 import { PhysicsAggregate } from "@babylonjs/core/Physics/v2/physicsAggregate";
+import type { PhysicsBody } from "@babylonjs/core/Physics/v2/physicsBody";
 import type { HavokPlugin } from "@babylonjs/core/Physics/v2/Plugins/havokPlugin";
 import type { Scene } from "@babylonjs/core/scene";
 
 import { GameConfig } from "../core/GameConfig";
+import { BodyTeleport } from "../physics/BodyTeleport";
+import { CollisionGroup } from "../physics/CollisionGroup";
 
 /**
  * Куб из пула: инстанс общего меша + своё тело.
@@ -21,15 +24,20 @@ export class ThrowableCube {
     this.physics = physics;
 
     this.mesh = source.createInstance(`throwable-cube-${index}`);
-    this.mesh.position.copyFrom(GameConfig.throwable.parkPosition);
+    this.mesh.position.copyFrom(GameConfig.parkPosition);
     this.aggregate = new PhysicsAggregate(
       this.mesh,
       PhysicsShapeType.BOX,
       GameConfig.throwable.body,
       scene,
     );
+    this.aggregate.shape.filterMembershipMask = CollisionGroup.Cube;
 
     this.park();
+  }
+
+  public get body(): PhysicsBody {
+    return this.aggregate.body;
   }
 
   public launch(position: Vector3, velocity: Vector3): void {
@@ -43,25 +51,12 @@ export class ThrowableCube {
   /** Вывод из игры без dispose: тело остаётся в мире Havok, но статичное и под полом. */
   public park(): void {
     this.aggregate.body.setMotionType(PhysicsMotionType.STATIC);
-    this.placeAt(GameConfig.throwable.parkPosition);
+    this.placeAt(GameConfig.parkPosition);
     this.mesh.isVisible = false;
   }
 
-  /**
-   * Телепорт: ставим меш и напрямую синхронизируем с ним тело, без ожидания шага физики.
-   * Havok телепортирует только тело с включённым pre-step, поэтому включаем его на время вызова.
-   * Оставлять включённым нельзя: физика каждый шаг тянула бы тело к мешу и куб завис бы в воздухе.
-   */
   private placeAt(position: Vector3): void {
-    const body = this.aggregate.body;
-
-    this.mesh.position.copyFrom(position);
-    this.mesh.rotationQuaternion?.set(0, 0, 0, 1);
-    this.mesh.computeWorldMatrix(true);
-
-    body.disablePreStep = false;
-    this.physics.setPhysicsBodyTransformation(body, this.mesh);
-    body.disablePreStep = true;
+    BodyTeleport.toPosition(this.physics, this.aggregate.body, this.mesh, position);
   }
 
   public dispose(): void {
