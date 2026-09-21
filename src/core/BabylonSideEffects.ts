@@ -9,9 +9,6 @@
  * Модуль импортируется первым в main.ts. Новую ловушку добавлять сюда, а не по месту.
  */
 
-// Mesh.createInstance
-import "@babylonjs/core/Meshes/instancedMesh";
-
 // Шейдеры StandardMaterial (GLSL для WebGL2 и WGSL для WebGPU)
 import "@babylonjs/core/Shaders/default.vertex";
 import "@babylonjs/core/Shaders/default.fragment";
