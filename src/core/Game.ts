@@ -4,6 +4,8 @@ import { Scene } from "@babylonjs/core/scene";
 
 import { TargetWall } from "../entities/TargetWall";
 import { Player } from "../entities/Player";
+import { KeyboardState } from "../input/KeyboardState";
+import { PlayerController } from "../input/PlayerController";
 import { Arena } from "../scene/Arena";
 import { GameConfig } from "./GameConfig";
 
@@ -14,6 +16,8 @@ export class Game {
   private readonly arena: Arena;
   private readonly player: Player;
   private readonly wall: TargetWall;
+  private readonly keyboard: KeyboardState;
+  private readonly controller: PlayerController;
 
   /** Колбэки создаются один раз: в кадре не должно появляться новых замыканий. */
   private readonly renderFrame = (): void => this.scene.render();
@@ -31,6 +35,14 @@ export class Game {
     this.arena = new Arena(this.scene, canvas);
     this.player = new Player(this.scene);
     this.wall = new TargetWall(this.scene);
+
+    this.keyboard = new KeyboardState();
+    this.controller = new PlayerController(
+      this.scene,
+      this.arena.viewCamera,
+      this.player,
+      this.keyboard,
+    );
   }
 
   public start(): void {
@@ -41,6 +53,8 @@ export class Game {
   public dispose(): void {
     window.removeEventListener("resize", this.handleResize);
     this.engine.stopRenderLoop(this.renderFrame);
+    this.controller.dispose();
+    this.keyboard.dispose();
     this.wall.dispose();
     this.player.dispose();
     this.arena.dispose();

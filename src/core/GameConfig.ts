@@ -35,6 +35,8 @@ export interface PlayerConfig {
   readonly radius: number;
   readonly spawn: Vector3;
   readonly color: Color3;
+  /** Скорость движения по полу, м/с. */
+  readonly speed: number;
   readonly body: BodyConfig;
 }
 
@@ -86,6 +88,7 @@ export const GameConfig: SceneConfig = {
     radius: 0.5,
     spawn: new Vector3(-5, 1, 0),
     color: new Color3(0.35, 0.62, 0.95),
+    speed: 7,
     body: { mass: 5, friction: 0.6, restitution: 0.05 },
   },
   wall: {

@@ -51,6 +51,10 @@ export class Arena {
     this.groundBody = new PhysicsAggregate(this.ground, PhysicsShapeType.BOX, ground.body, scene);
   }
 
+  public get viewCamera(): ArcRotateCamera {
+    return this.camera;
+  }
+
   public get groundMesh(): Mesh {
     return this.ground;
   }
