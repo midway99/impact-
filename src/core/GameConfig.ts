@@ -22,12 +22,20 @@ export interface GroundConfig {
   readonly color: Color3;
 }
 
+export interface PlayerConfig {
+  readonly height: number;
+  readonly radius: number;
+  readonly spawn: Vector3;
+  readonly color: Color3;
+}
+
 export interface SceneConfig {
   readonly clearColor: Color3;
   readonly gravity: Vector3;
   readonly camera: CameraConfig;
   readonly light: LightConfig;
   readonly ground: GroundConfig;
+  readonly player: PlayerConfig;
 }
 
 /** Единственный источник констант сцены: в коде «магических» чисел быть не должно. */
@@ -51,5 +59,11 @@ export const GameConfig: SceneConfig = {
   ground: {
     size: 40,
     color: new Color3(0.18, 0.2, 0.24),
+  },
+  player: {
+    height: 2,
+    radius: 0.5,
+    spawn: new Vector3(0, 1, 0),
+    color: new Color3(0.35, 0.62, 0.95),
   },
 };
