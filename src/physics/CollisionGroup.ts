@@ -7,8 +7,7 @@ export enum CollisionGroup {
   Player = 1 << 1,
   Wall = 1 << 2,
   Cube = 1 << 3,
-  Rope = 1 << 4,
 }
 
-/** Статичное окружение: то, обо что цепляется верёвка и во что упирается прицел. */
+/** Статичное окружение: то, во что упирается прицел. */
 export const ENVIRONMENT_GROUPS = CollisionGroup.Ground | CollisionGroup.Wall;

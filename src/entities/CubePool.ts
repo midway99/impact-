@@ -17,7 +17,6 @@ export class CubePool {
   private readonly source: Mesh;
   private readonly material: StandardMaterial;
   private readonly cubes: readonly ThrowableCube[];
-  private readonly cubeBodies: readonly PhysicsBody[];
   private next = 0;
 
   public constructor(scene: Scene, physics: HavokPlugin) {
@@ -31,19 +30,10 @@ export class CubePool {
     this.source.material = this.material;
 
     const cubes = new Array<ThrowableCube>(poolSize);
-    const bodies = new Array<PhysicsBody>(poolSize);
     for (let i = 0; i < poolSize; i++) {
-      const cube = new ThrowableCube(this.source, i, physics, scene);
-      cubes[i] = cube;
-      bodies[i] = cube.body;
+      cubes[i] = new ThrowableCube(this.source, i, physics, scene);
     }
     this.cubes = cubes;
-    this.cubeBodies = bodies;
-  }
-
-  /** Тела всех кубов пула — список постоянный, пул не растёт. */
-  public get bodies(): readonly PhysicsBody[] {
-    return this.cubeBodies;
   }
 
   /** Следующий куб по кругу: когда пул исчерпан, переиспользуется самый старый. Возвращает его тело. */

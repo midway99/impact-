@@ -12,10 +12,16 @@ import { KeyboardState } from "../input/KeyboardState";
 import { PlayerController } from "../input/PlayerController";
 import { ThrowAim } from "../input/ThrowAim";
 import { ThrowController } from "../input/ThrowController";
+import { BoxCollider } from "../physics/rope/BoxCollider";
+import { GroundCollider } from "../physics/rope/GroundCollider";
+import type { RopeCollider } from "../physics/rope/RopeCollider";
 import { Arena } from "../scene/Arena";
 import { GameConfig } from "./GameConfig";
 
 const MS_PER_SECOND = 1000;
+/** PhysicsEngine._step обрезает шаг Havok сверху этим значением, с. */
+const MAX_PHYSICS_STEP_SECONDS = 0.1;
+const GROUND_HEIGHT = 0;
 
 /** Владелец движка, сцены и игрового цикла. Логика сущностей живёт в отдельных классах. */
 export class Game {
@@ -37,8 +43,8 @@ export class Game {
   private readonly renderFrame = (): void => this.scene.render();
   private readonly handleResize = (): void => this.engine.resize();
   private readonly update = (): void => this.tick(this.engine.getDeltaTime() / MS_PER_SECOND);
-  /** Визуал верёвки — после шага физики, когда звенья и куб уже на новых местах. */
-  private readonly afterPhysics = (): void => this.ropeView.update();
+  /** Верёвка — сразу после шага Havok: куб уже на новом месте, и шаг у них общий. */
+  private readonly afterPhysics = (): void => this.stepRope();
 
   public constructor(canvas: HTMLCanvasElement, physics: HavokPlugin) {
     this.engine = new Engine(canvas, true, { stencil: true }, true);
@@ -53,7 +59,7 @@ export class Game {
     this.player = new Player(this.scene);
     this.wall = new TargetWall(this.scene);
     this.cubes = new CubePool(this.scene, physics);
-    this.rope = new Rope(this.scene, physics, this.player, this.cubes.bodies);
+    this.rope = new Rope(this.player, this.createRopeColliders());
     this.ropeView = new RopeRenderer(this.scene, this.rope);
 
     const camera = this.arena.viewCamera;
@@ -79,6 +85,27 @@ export class Game {
     this.trajectory.update();
   }
 
+  private stepRope(): void {
+    this.rope.update(this.physicsStepSeconds());
+    this.ropeView.update();
+  }
+
+  /** Тот же шаг, с которым Babylon только что шагнул Havok: дельта кадра, обрезанная как в Scene и PhysicsEngine. */
+  private physicsStepSeconds(): number {
+    const deltaMs = Math.max(Scene.MinDeltaTime, Math.min(this.engine.getDeltaTime(), Scene.MaxDeltaTime));
+
+    return Math.min(deltaMs / MS_PER_SECOND, MAX_PHYSICS_STEP_SECONDS);
+  }
+
+  private createRopeColliders(): readonly RopeCollider[] {
+    const { radius, friction } = GameConfig.rope;
+
+    return [
+      new GroundCollider(GROUND_HEIGHT, radius, friction),
+      new BoxCollider(this.wall.transform, this.wall.halfExtents, radius),
+    ];
+  }
+
   public dispose(): void {
     window.removeEventListener("resize", this.handleResize);
     this.scene.onBeforeRenderObservable.removeCallback(this.update);
@@ -87,8 +114,6 @@ export class Game {
     this.keyboard.dispose();
     this.trajectory.dispose();
     this.ropeView.dispose();
-    // Верёвка держит соединения с персонажем и кубами — освобождаем её раньше них.
-    this.rope.dispose();
     this.cubes.dispose();
     this.wall.dispose();
     this.player.dispose();
