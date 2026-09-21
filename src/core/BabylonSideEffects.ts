@@ -12,6 +12,9 @@
 // Mesh.createInstance (пул бросаемых кубов)
 import "@babylonjs/core/Meshes/instancedMesh";
 
+// Mesh.thinInstance* (пунктир траектории)
+import "@babylonjs/core/Meshes/thinInstanceMesh";
+
 // scene.enablePhysics и физика Physics V2
 import "@babylonjs/core/Physics/joinedPhysicsEngineComponent";
 

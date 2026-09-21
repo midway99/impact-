@@ -2,11 +2,13 @@ import { Engine } from "@babylonjs/core/Engines/engine";
 import type { HavokPlugin } from "@babylonjs/core/Physics/v2/Plugins/havokPlugin";
 import { Scene } from "@babylonjs/core/scene";
 
+import { TrajectoryPreview } from "../effects/TrajectoryPreview";
 import { CubePool } from "../entities/CubePool";
 import { Player } from "../entities/Player";
 import { TargetWall } from "../entities/TargetWall";
 import { KeyboardState } from "../input/KeyboardState";
 import { PlayerController } from "../input/PlayerController";
+import { ThrowAim } from "../input/ThrowAim";
 import { ThrowController } from "../input/ThrowController";
 import { Arena } from "../scene/Arena";
 import { GameConfig } from "./GameConfig";
@@ -23,7 +25,9 @@ export class Game {
   private readonly cubes: CubePool;
   private readonly keyboard: KeyboardState;
   private readonly movement: PlayerController;
+  private readonly aim: ThrowAim;
   private readonly throwing: ThrowController;
+  private readonly trajectory: TrajectoryPreview;
 
   /** Колбэки создаются один раз: в кадре не должно появляться новых замыканий. */
   private readonly renderFrame = (): void => this.scene.render();
@@ -47,7 +51,9 @@ export class Game {
     const camera = this.arena.viewCamera;
     this.keyboard = new KeyboardState();
     this.movement = new PlayerController(camera, this.player, this.keyboard);
-    this.throwing = new ThrowController(camera, this.player, this.keyboard, this.cubes);
+    this.aim = new ThrowAim(camera, this.player);
+    this.throwing = new ThrowController(this.keyboard, this.aim, this.cubes);
+    this.trajectory = new TrajectoryPreview(this.scene, physics, this.aim);
   }
 
   public start(): void {
@@ -59,7 +65,9 @@ export class Game {
   /** Один кадр игровой логики: порядок вызовов систем задан здесь явно. */
   private tick(deltaSeconds: number): void {
     this.movement.update();
+    this.aim.update();
     this.throwing.update(deltaSeconds);
+    this.trajectory.update();
   }
 
   public dispose(): void {
@@ -67,6 +75,7 @@ export class Game {
     this.scene.onBeforeRenderObservable.removeCallback(this.update);
     this.engine.stopRenderLoop(this.renderFrame);
     this.keyboard.dispose();
+    this.trajectory.dispose();
     this.cubes.dispose();
     this.wall.dispose();
     this.player.dispose();

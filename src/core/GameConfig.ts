@@ -69,6 +69,15 @@ export interface ThrowableConfig {
   readonly body: BodyConfig;
 }
 
+export interface TrajectoryConfig {
+  /** Максимум точек пунктира; дуга обрывается раньше на первом препятствии. */
+  readonly dotCount: number;
+  readonly dotRadius: number;
+  /** Шаг по времени между соседними точками, с. */
+  readonly timeStep: number;
+  readonly color: Color3;
+}
+
 export interface SceneConfig {
   readonly clearColor: Color3;
   readonly gravity: Vector3;
@@ -78,6 +87,7 @@ export interface SceneConfig {
   readonly player: PlayerConfig;
   readonly wall: WallConfig;
   readonly throwable: ThrowableConfig;
+  readonly trajectory: TrajectoryConfig;
 }
 
 /** Единственный источник констант сцены: в коде «магических» чисел быть не должно. */
@@ -131,5 +141,11 @@ export const GameConfig: SceneConfig = {
     spawnHeight: 0.5,
     parkPosition: new Vector3(0, -50, 0),
     body: { mass: 1, friction: 0.6, restitution: 0.2 },
+  },
+  trajectory: {
+    dotCount: 40,
+    dotRadius: 0.06,
+    timeStep: 0.04,
+    color: new Color3(1, 0.9, 0.45),
   },
 };
