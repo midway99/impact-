@@ -1,4 +1,5 @@
 import "./style.css";
+import "./core/BabylonSideEffects";
 
 import { Game } from "./core/Game";
 
