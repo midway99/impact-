@@ -15,6 +15,9 @@ import "@babylonjs/core/Meshes/instancedMesh";
 // Mesh.thinInstance* (пунктир траектории)
 import "@babylonjs/core/Meshes/thinInstanceMesh";
 
+// scene.createPickingRay: нужен камере и пикингу под указателем
+import "@babylonjs/core/Culling/ray";
+
 // scene.enablePhysics и физика Physics V2
 import "@babylonjs/core/Physics/joinedPhysicsEngineComponent";
 

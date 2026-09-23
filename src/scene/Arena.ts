@@ -1,4 +1,3 @@
-import { ArcRotateCamera } from "@babylonjs/core/Cameras/arcRotateCamera";
 import { DirectionalLight } from "@babylonjs/core/Lights/directionalLight";
 import { HemisphericLight } from "@babylonjs/core/Lights/hemisphericLight";
 import { StandardMaterial } from "@babylonjs/core/Materials/standardMaterial";
@@ -11,29 +10,15 @@ import type { Scene } from "@babylonjs/core/scene";
 import { GameConfig } from "../core/GameConfig";
 import { CollisionGroup } from "../physics/CollisionGroup";
 
-/** Окружение сцены: камера, свет и пол. Игровых сущностей не знает. */
+/** Окружение сцены: свет и пол. Камера и игровые сущности — не его забота. */
 export class Arena {
-  private readonly camera: ArcRotateCamera;
   private readonly sun: DirectionalLight;
   private readonly ambient: HemisphericLight;
   private readonly ground: Mesh;
   private readonly groundBody: PhysicsAggregate;
 
-  public constructor(scene: Scene, canvas: HTMLCanvasElement) {
-    const { camera, light, ground } = GameConfig;
-
-    this.camera = new ArcRotateCamera(
-      "camera",
-      camera.alpha,
-      camera.beta,
-      camera.radius,
-      camera.target,
-      scene,
-    );
-    this.camera.lowerRadiusLimit = camera.minRadius;
-    this.camera.upperRadiusLimit = camera.maxRadius;
-    this.camera.wheelDeltaPercentage = 0.02;
-    this.camera.attachControl(canvas, true);
+  public constructor(scene: Scene) {
+    const { light, ground } = GameConfig;
 
     this.sun = new DirectionalLight("sun", light.direction, scene);
     this.sun.intensity = light.intensity;
@@ -53,10 +38,6 @@ export class Arena {
     this.groundBody.shape.filterMembershipMask = CollisionGroup.Ground;
   }
 
-  public get viewCamera(): ArcRotateCamera {
-    return this.camera;
-  }
-
   public get groundMesh(): Mesh {
     return this.ground;
   }
@@ -67,6 +48,5 @@ export class Arena {
     this.ground.dispose();
     this.ambient.dispose();
     this.sun.dispose();
-    this.camera.dispose();
   }
 }

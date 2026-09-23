@@ -4,7 +4,6 @@ import { Vector3 } from "@babylonjs/core/Maths/math.vector";
 
 import { GameConfig } from "../core/GameConfig";
 import type { Player } from "../entities/Player";
-import { CameraAxes } from "./CameraAxes";
 
 /**
  * Прицел броска: точка вылета и начальная скорость куба на текущий кадр.
@@ -34,7 +33,9 @@ export class ThrowAim {
   public update(): void {
     const { speed, lift, spawnForward, spawnHeight } = GameConfig.throwable;
 
-    CameraAxes.groundAxisToRef(this.camera, Axis.Z, this.forward);
+    // Направление взгляда целиком: смотришь вверх — куб летит выше, вниз — под ноги.
+    this.camera.getDirectionToRef(Axis.Z, this.forward);
+    this.forward.normalize();
 
     // Точка вылета — перед персонажем, чтобы куб не родился внутри капсулы.
     this.forward.scaleToRef(spawnForward, this.launchOrigin);
@@ -42,6 +43,7 @@ export class ThrowAim {
     this.launchOrigin.y += spawnHeight;
 
     this.forward.scaleToRef(speed, this.launchVelocity);
-    this.launchVelocity.y = lift;
+    // Подъём добавляется к взгляду, а не заменяет его.
+    this.launchVelocity.y += lift;
   }
 }

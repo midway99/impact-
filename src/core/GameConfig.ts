@@ -2,12 +2,14 @@ import { Color3 } from "@babylonjs/core/Maths/math.color";
 import { Vector3 } from "@babylonjs/core/Maths/math.vector";
 
 export interface CameraConfig {
-  readonly alpha: number;
-  readonly beta: number;
-  readonly radius: number;
-  readonly minRadius: number;
-  readonly maxRadius: number;
-  readonly target: Vector3;
+  /** Высота глаз над центром капсулы, м. */
+  readonly eyeHeight: number;
+  /** Чувствительность мыши: больше значение — медленнее поворот. */
+  readonly angularSensibility: number;
+  /** Предел взгляда вверх и вниз, рад. */
+  readonly maxPitch: number;
+  /** Ближняя плоскость отсечения, м. */
+  readonly minZ: number;
 }
 
 export interface LightConfig {
@@ -96,12 +98,10 @@ export const GameConfig: SceneConfig = {
   gravity: new Vector3(0, -9.81, 0),
   parkPosition: new Vector3(0, -50, 0),
   camera: {
-    alpha: -Math.PI / 2,
-    beta: Math.PI / 3,
-    radius: 18,
-    minRadius: 6,
-    maxRadius: 60,
-    target: new Vector3(0, 1, 0),
+    eyeHeight: 0.6,
+    angularSensibility: 800,
+    maxPitch: 1.5,
+    minZ: 0.1,
   },
   light: {
     direction: new Vector3(-0.45, -1, 0.6),

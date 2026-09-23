@@ -11,6 +11,7 @@ import { PlayerController } from "../input/PlayerController";
 import { ThrowAim } from "../input/ThrowAim";
 import { ThrowController } from "../input/ThrowController";
 import { Arena } from "../scene/Arena";
+import { FirstPersonCamera } from "../scene/FirstPersonCamera";
 import { GameConfig } from "./GameConfig";
 
 const MS_PER_SECOND = 1000;
@@ -21,6 +22,7 @@ export class Game {
   private readonly scene: Scene;
   private readonly arena: Arena;
   private readonly player: Player;
+  private readonly view: FirstPersonCamera;
   private readonly wall: TargetWall;
   private readonly cubes: CubePool;
   private readonly keyboard: KeyboardState;
@@ -39,16 +41,17 @@ export class Game {
 
     this.scene = new Scene(this.engine);
     this.scene.clearColor = GameConfig.clearColor.toColor4(1);
-    this.scene.gravity.copyFrom(GameConfig.gravity);
-    // Физику включаем до создания сущностей: их тела добавляются в уже готовый мир.
     this.scene.enablePhysics(GameConfig.gravity, physics);
 
-    this.arena = new Arena(this.scene, canvas);
+    this.arena = new Arena(this.scene);
     this.player = new Player(this.scene);
+    // Камера внутри капсулы: своё тело не рисуем, иначе оно закрывает обзор.
+    this.player.setVisible(false);
+    this.view = new FirstPersonCamera(this.scene, canvas, this.player);
     this.wall = new TargetWall(this.scene);
     this.cubes = new CubePool(this.scene, physics);
 
-    const camera = this.arena.viewCamera;
+    const camera = this.view.camera;
     this.keyboard = new KeyboardState();
     this.movement = new PlayerController(camera, this.player, this.keyboard);
     this.aim = new ThrowAim(camera, this.player);
@@ -64,6 +67,7 @@ export class Game {
 
   /** Один кадр игровой логики: порядок вызовов систем задан здесь явно. */
   private tick(deltaSeconds: number): void {
+    this.view.update();
     this.movement.update();
     this.aim.update();
     this.throwing.update(deltaSeconds);
@@ -76,6 +80,7 @@ export class Game {
     this.engine.stopRenderLoop(this.renderFrame);
     this.keyboard.dispose();
     this.trajectory.dispose();
+    this.view.dispose();
     this.cubes.dispose();
     this.wall.dispose();
     this.player.dispose();

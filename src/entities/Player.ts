@@ -42,6 +42,11 @@ export class Player {
     return this.mesh;
   }
 
+  /** Своё тело не рисуем, когда камера сидит внутри капсулы. */
+  public setVisible(visible: boolean): void {
+    this.mesh.isVisible = visible;
+  }
+
   public get position(): Vector3 {
     return this.mesh.position;
   }
