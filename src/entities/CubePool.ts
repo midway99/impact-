@@ -2,7 +2,6 @@ import { StandardMaterial } from "@babylonjs/core/Materials/standardMaterial";
 import type { Vector3 } from "@babylonjs/core/Maths/math.vector";
 import { CreateBox } from "@babylonjs/core/Meshes/Builders/boxBuilder";
 import type { Mesh } from "@babylonjs/core/Meshes/mesh";
-import type { PhysicsBody } from "@babylonjs/core/Physics/v2/physicsBody";
 import type { HavokPlugin } from "@babylonjs/core/Physics/v2/Plugins/havokPlugin";
 import type { Scene } from "@babylonjs/core/scene";
 
@@ -36,13 +35,10 @@ export class CubePool {
     this.cubes = cubes;
   }
 
-  /** Следующий куб по кругу: когда пул исчерпан, переиспользуется самый старый. Возвращает его тело. */
-  public launchNext(position: Vector3, velocity: Vector3): PhysicsBody | undefined {
-    const cube = this.cubes[this.next];
+  /** Следующий куб по кругу: когда пул исчерпан, переиспользуется самый старый. */
+  public launchNext(position: Vector3, velocity: Vector3): void {
+    this.cubes[this.next]?.launch(position, velocity);
     this.next = (this.next + 1) % this.cubes.length;
-    cube?.launch(position, velocity);
-
-    return cube?.body;
   }
 
   public dispose(): void {
