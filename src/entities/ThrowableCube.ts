@@ -3,7 +3,6 @@ import type { InstancedMesh } from "@babylonjs/core/Meshes/instancedMesh";
 import type { Mesh } from "@babylonjs/core/Meshes/mesh";
 import { PhysicsMotionType, PhysicsShapeType } from "@babylonjs/core/Physics/v2/IPhysicsEnginePlugin";
 import { PhysicsAggregate } from "@babylonjs/core/Physics/v2/physicsAggregate";
-import type { PhysicsBody } from "@babylonjs/core/Physics/v2/physicsBody";
 import type { HavokPlugin } from "@babylonjs/core/Physics/v2/Plugins/havokPlugin";
 import type { Scene } from "@babylonjs/core/scene";
 
@@ -36,9 +35,6 @@ export class ThrowableCube {
     this.park();
   }
 
-  public get body(): PhysicsBody {
-    return this.aggregate.body;
-  }
 
   public launch(position: Vector3, velocity: Vector3): void {
     this.aggregate.body.setMotionType(PhysicsMotionType.DYNAMIC);

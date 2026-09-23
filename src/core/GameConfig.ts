@@ -76,31 +76,6 @@ export interface TrajectoryConfig {
   readonly color: Color3;
 }
 
-export interface RopeConfig {
-  /** Частиц верёвки, включая якорь на руке; прокси куба добавляется сверху. */
-  readonly particleCount: number;
-  /** Длина верёвки от руки до куба, м. */
-  readonly length: number;
-  /** Подшагов решателя на кадр: больше — жёстче и точнее верёвка. */
-  readonly substeps: number;
-  /** Радиус частицы для столкновений, м. */
-  readonly radius: number;
-  /** Толщина отрисовки, м. */
-  readonly thickness: number;
-  readonly particleMass: number;
-  /** Податливость растяжения, м/Н: 0 — нерастяжимая. */
-  readonly stretchCompliance: number;
-  /** Податливость изгиба, м/Н: больше — мягче верёвка. */
-  readonly bendCompliance: number;
-  /** Затухание скорости частиц, 1/с. */
-  readonly damping: number;
-  /** Трение о пол: доля горизонтального смещения, гасимая за подшаг (0..1). */
-  readonly friction: number;
-  /** Точка крепления на персонаже относительно его центра. */
-  readonly anchorOffset: Vector3;
-  readonly color: Color3;
-}
-
 export interface SceneConfig {
   readonly clearColor: Color3;
   readonly gravity: Vector3;
@@ -113,7 +88,6 @@ export interface SceneConfig {
   readonly wall: WallConfig;
   readonly throwable: ThrowableConfig;
   readonly trajectory: TrajectoryConfig;
-  readonly rope: RopeConfig;
 }
 
 /** Единственный источник констант сцены: в коде «магических» чисел быть не должно. */
@@ -173,19 +147,5 @@ export const GameConfig: SceneConfig = {
     dotRadius: 0.06,
     timeStep: 0.04,
     color: new Color3(1, 0.9, 0.45),
-  },
-  rope: {
-    particleCount: 32,
-    length: 7.5,
-    substeps: 15,
-    radius: 0.05,
-    thickness: 0.05,
-    particleMass: 0.02,
-    stretchCompliance: 0,
-    bendCompliance: 0.01,
-    damping: 0.5,
-    friction: 0.6,
-    anchorOffset: new Vector3(0, 0.5, 0),
-    color: new Color3(0.86, 0.76, 0.56),
   },
 };
