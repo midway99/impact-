@@ -31,6 +31,7 @@ export class RopeRenderer {
   /** Смещения вершин сечения — считаются один раз. */
   private readonly cosines: Float32Array;
   private readonly sines: Float32Array;
+  private renderedRevision = -1;
 
   // Scratch-поля: опорные точки сплайна и система координат вдоль кривой.
   private readonly before = new Vector3();
@@ -88,6 +89,9 @@ export class RopeRenderer {
       this.mesh.isVisible = false;
       return;
     }
+    if (this.renderedRevision === this.rope.revision) {
+      return;
+    }
 
     this.buildPath();
     this.writeRings();
@@ -95,6 +99,7 @@ export class RopeRenderer {
     this.mesh.updateVerticesData(VertexBuffer.PositionKind, this.positions, false, false);
     this.mesh.updateVerticesData(VertexBuffer.NormalKind, this.normals, false, false);
     this.mesh.isVisible = true;
+    this.renderedRevision = this.rope.revision;
   }
 
   /** Треугольники между соседними кольцами. Топология постоянна — считается один раз. */

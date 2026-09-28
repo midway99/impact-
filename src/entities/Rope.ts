@@ -20,6 +20,7 @@ export class Rope {
   private readonly proxy: number;
 
   private target: PhysicsBody | null = null;
+  private stateRevision = 0;
 
   private readonly anchorFrom = new Vector3();
   private readonly anchorTo = new Vector3();
@@ -52,6 +53,11 @@ export class Rope {
     return this.particles.count;
   }
 
+  /** Меняется только когда позиции частиц могли измениться. */
+  public get revision(): number {
+    return this.stateRevision;
+  }
+
   public copyPointTo(index: number, result: Vector3): void {
     this.particles.readToRef(this.particles.position, index, result);
   }
@@ -75,6 +81,7 @@ export class Rope {
     }
 
     this.target = target;
+    this.stateRevision++;
   }
 
   /**
@@ -121,6 +128,7 @@ export class Rope {
 
     this.solver.simulate(stepSeconds, this.anchorFrom, this.anchorTo);
     this.pushTarget(this.target);
+    this.stateRevision++;
   }
 
   private isAtRest(): boolean {
