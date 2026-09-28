@@ -32,6 +32,9 @@ export class Arena {
     groundMaterial.diffuseColor = ground.color;
     groundMaterial.specularColor.setAll(0);
     this.ground.material = groundMaterial;
+    // Пол неподвижен и не меняется: замораживаем матрицу и материал.
+    groundMaterial.freeze();
+    this.ground.freezeWorldMatrix();
 
     // BodyConfig совпадает по форме с параметрами агрегата — параметры не дублируем.
     this.groundBody = new PhysicsAggregate(this.ground, PhysicsShapeType.BOX, ground.body, scene);

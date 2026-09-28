@@ -28,6 +28,7 @@ export class TargetWall {
     this.material.diffuseColor = color;
     this.material.specularColor.setAll(0.05);
     this.mesh.material = this.material;
+    this.material.freeze();
 
     // Тело динамическое: стену можно сдвинуть и опрокинуть ударом.
     this.aggregate = new PhysicsAggregate(this.mesh, PhysicsShapeType.BOX, GameConfig.wall.body, scene);

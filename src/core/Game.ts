@@ -53,10 +53,16 @@ export class Game {
   private readonly afterPhysics = (): void => this.stepRope();
 
   public constructor(canvas: HTMLCanvasElement, physics: HavokPlugin) {
-    this.engine = new Engine(canvas, true, { stencil: true }, true);
+    const { antialias, maxPixelRatio } = GameConfig.render;
+
+    this.engine = new Engine(canvas, antialias, { stencil: true }, false);
+    // Уровень 1 — один пиксель рендера на CSS-пиксель; меньше единицы = сверхвыборка.
+    this.engine.setHardwareScalingLevel(1 / Math.min(window.devicePixelRatio, maxPixelRatio));
 
     this.scene = new Scene(this.engine);
     this.scene.clearColor = GameConfig.clearColor.toColor4(1);
+    // Мы не выбираем объекты указателем: незачем трассировать луч на каждое движение мыши.
+    this.scene.skipPointerMovePicking = true;
     this.scene.enablePhysics(GameConfig.gravity, physics);
 
     this.arena = new Arena(this.scene);

@@ -3,6 +3,16 @@ import { Vector3 } from "@babylonjs/core/Maths/math.vector";
 
 import { CollisionGroup } from "../physics/CollisionGroup";
 
+export interface RenderConfig {
+  /** Сглаживание краёв. Дорого на слабых видеокартах. */
+  readonly antialias: boolean;
+  /**
+   * Верхняя граница плотности пикселей. На экране с масштабом 200 % рендер без ограничения
+   * идёт в четыре раза большем разрешении — самая частая причина просадок.
+   */
+  readonly maxPixelRatio: number;
+}
+
 export interface CameraConfig {
   /** Высота глаз над центром капсулы, м. */
   readonly eyeHeight: number;
@@ -118,6 +128,7 @@ export interface SceneConfig {
   readonly gravity: Vector3;
   /** Где лежат неиспользуемые физические тела из пулов: статичные, под полом. */
   readonly parkPosition: Vector3;
+  readonly render: RenderConfig;
   readonly camera: CameraConfig;
   readonly light: LightConfig;
   readonly ground: GroundConfig;
@@ -133,6 +144,10 @@ export const GameConfig: SceneConfig = {
   clearColor: new Color3(0.043, 0.051, 0.071),
   gravity: new Vector3(0, -9.81, 0),
   parkPosition: new Vector3(0, -50, 0),
+  render: {
+    antialias: true,
+    maxPixelRatio: 1,
+  },
   camera: {
     eyeHeight: 0.6,
     angularSensibility: 800,
