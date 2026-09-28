@@ -12,6 +12,7 @@ import type { ThrowAim } from "../input/ThrowAim";
 import { ENVIRONMENT_GROUPS } from "../physics/CollisionGroup";
 
 const MATRIX_SIZE = 16;
+const AIM_EPSILON_SQUARED = 1e-8;
 
 /**
  * Пунктир траектории броска до первого препятствия.
@@ -30,6 +31,9 @@ export class TrajectoryPreview {
   private readonly point = new Vector3();
   private readonly previous = new Vector3();
   private readonly transform = new Matrix();
+  private readonly previousOrigin = new Vector3();
+  private readonly previousVelocity = new Vector3();
+  private initialized = false;
 
   public constructor(scene: Scene, physics: HavokPlugin, aim: ThrowAim) {
     const { dotCount, dotRadius, color } = GameConfig.trajectory;
@@ -54,10 +58,25 @@ export class TrajectoryPreview {
   }
 
   public update(): void {
+    if (!this.aimChanged()) {
+      return;
+    }
+
     const count = this.traceDots();
 
     this.dot.thinInstanceCount = count;
     this.dot.thinInstanceBufferUpdated("matrix");
+    this.previousOrigin.copyFrom(this.aim.origin);
+    this.previousVelocity.copyFrom(this.aim.velocity);
+    this.initialized = true;
+  }
+
+  private aimChanged(): boolean {
+    return (
+      !this.initialized ||
+      Vector3.DistanceSquared(this.aim.origin, this.previousOrigin) > AIM_EPSILON_SQUARED ||
+      Vector3.DistanceSquared(this.aim.velocity, this.previousVelocity) > AIM_EPSILON_SQUARED
+    );
   }
 
   private traceDots(): number {
