@@ -14,6 +14,7 @@ import { ThrowAim } from "../input/ThrowAim";
 import { ThrowController } from "../input/ThrowController";
 import { BoxCollider } from "../physics/rope/BoxCollider";
 import { GroundCollider } from "../physics/rope/GroundCollider";
+import { ImpactFreezer } from "../physics/ImpactFreezer";
 import type { RopeCollider } from "../physics/rope/RopeCollider";
 import { Arena } from "../scene/Arena";
 import { FirstPersonCamera } from "../scene/FirstPersonCamera";
@@ -33,6 +34,7 @@ export class Game {
   private readonly view: FirstPersonCamera;
   private readonly wall: TargetWall;
   private readonly cubes: CubePool;
+  private readonly freezer: ImpactFreezer;
   private readonly rope: Rope;
   private readonly ropeView: RopeRenderer;
   private readonly keyboard: KeyboardState;
@@ -40,6 +42,8 @@ export class Game {
   private readonly aim: ThrowAim;
   private readonly throwing: ThrowController;
   private readonly trajectory: TrajectoryPreview;
+  /** Инструмент разработки: подключается динамически и только в dev-режиме. */
+  private inspector?: { update(): void };
 
   /** Колбэки создаются один раз: в кадре не должно появляться новых замыканий. */
   private readonly renderFrame = (): void => this.scene.render();
@@ -62,18 +66,31 @@ export class Game {
     this.view = new FirstPersonCamera(this.scene, canvas, this.player);
     this.wall = new TargetWall(this.scene);
     this.cubes = new CubePool(this.scene, physics);
+    this.freezer = new ImpactFreezer(physics);
     this.rope = new Rope(this.player, this.createRopeColliders());
     this.ropeView = new RopeRenderer(this.scene, this.rope);
 
     const camera = this.view.camera;
     this.keyboard = new KeyboardState();
-    this.movement = new PlayerController(camera, this.player, this.keyboard);
+    this.movement = new PlayerController(camera, this.player, this.keyboard, this.rope);
     this.aim = new ThrowAim(camera, this.player);
     this.throwing = new ThrowController(this.keyboard, this.aim, this.cubes, this.rope);
     this.trajectory = new TrajectoryPreview(this.scene, physics, this.aim);
   }
 
+  /** Инспектор Babylon (клавиша ~) живёт только в разработке: в сборку он не попадает. */
+  private loadInspector(): void {
+    if (!import.meta.env.DEV) {
+      return;
+    }
+
+    void import("../ui/InspectorToggle").then(({ InspectorToggle }) => {
+      this.inspector = new InspectorToggle(this.scene, this.keyboard);
+    });
+  }
+
   public start(): void {
+    this.loadInspector();
     this.scene.onBeforeRenderObservable.add(this.update);
     this.scene.onAfterPhysicsObservable.add(this.afterPhysics);
     this.engine.runRenderLoop(this.renderFrame);
@@ -87,6 +104,7 @@ export class Game {
     this.aim.update();
     this.throwing.update(deltaSeconds);
     this.trajectory.update();
+    this.inspector?.update();
   }
 
   private stepRope(): void {
@@ -116,6 +134,7 @@ export class Game {
     this.scene.onAfterPhysicsObservable.removeCallback(this.afterPhysics);
     this.engine.stopRenderLoop(this.renderFrame);
     this.keyboard.dispose();
+    this.freezer.dispose();
     this.trajectory.dispose();
     this.view.dispose();
     this.ropeView.dispose();

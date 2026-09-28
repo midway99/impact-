@@ -1,4 +1,5 @@
 import { Vector3 } from "@babylonjs/core/Maths/math.vector";
+import { PhysicsMotionType } from "@babylonjs/core/Physics/v2/IPhysicsEnginePlugin";
 import type { PhysicsBody } from "@babylonjs/core/Physics/v2/physicsBody";
 
 import { GameConfig } from "../core/GameConfig";
@@ -25,6 +26,9 @@ export class Rope {
   private readonly point = new Vector3();
   private readonly velocity = new Vector3();
   private readonly targetVelocity = new Vector3();
+  private readonly outward = new Vector3();
+  /** Квадрат скорости, ниже которой движение считается покоем: 0.1 м/с — 1.6 мм за кадр. */
+  private static readonly REST_SPEED_SQUARED = 0.01;
 
   public constructor(player: Player, colliders: readonly RopeCollider[]) {
     this.player = player;
@@ -73,6 +77,32 @@ export class Rope {
     this.target = target;
   }
 
+  /**
+   * Поводок: убирает из направления движения составляющую, которая уводит персонажа
+   * дальше длины верёвки. Ходить вдоль и обратно к кубу по-прежнему можно.
+   */
+  public clampMovement(direction: Vector3): void {
+    // Динамический куб верёвка просто потащит за собой — ограничивать движение не нужно.
+    if (!this.target || this.target.getMotionType() !== PhysicsMotionType.STATIC) {
+      return;
+    }
+
+    this.anchorToRef(this.anchorTo);
+    this.anchorTo.subtractToRef(this.target.transformNode.position, this.outward);
+
+    const distance = this.outward.length();
+    if (distance < GameConfig.rope.length || distance === 0) {
+      return;
+    }
+
+    // Составляющая ввода вдоль «от куба»: если положительная — верёвка её не пускает.
+    this.outward.scaleInPlace(1 / distance);
+    const stretching = Vector3.Dot(direction, this.outward);
+    if (stretching > 0) {
+      this.outward.scaleAndAddToRef(-stretching, direction);
+    }
+  }
+
   /** Шаг верёвки сразу после шага Havok и с тем же `dt`. */
   public update(stepSeconds: number): void {
     if (!this.target) {
@@ -83,8 +113,24 @@ export class Rope {
     this.anchorToRef(this.anchorTo);
 
     this.readTarget(this.target);
+
+    // Покоящуюся верёвку считать незачем: ни рука, ни куб, ни сами частицы не двигаются.
+    if (this.isAtRest()) {
+      return;
+    }
+
     this.solver.simulate(stepSeconds, this.anchorFrom, this.anchorTo);
     this.pushTarget(this.target);
+  }
+
+  private isAtRest(): boolean {
+    const rest = Rope.REST_SPEED_SQUARED;
+
+    return (
+      this.solver.motion < rest &&
+      this.targetVelocity.lengthSquared() < rest &&
+      Vector3.DistanceSquared(this.anchorFrom, this.anchorTo) < rest
+    );
   }
 
   /** Прокси = куб в том состоянии, которое Havok только что посчитал. */
@@ -96,10 +142,19 @@ export class Rope {
     this.particles.write(previous, this.proxy, cube);
     target.getLinearVelocityToRef(this.targetVelocity);
     this.particles.write(velocity, this.proxy, this.targetVelocity);
+
+    // Примёрзший куб верёвка сдвинуть не может: для решателя он закреплён, как рука.
+    const isFrozen = target.getMotionType() === PhysicsMotionType.STATIC;
+    this.particles.inverseMass[this.proxy] = isFrozen ? 0 : 1 / GameConfig.throwable.body.mass;
   }
 
   /** Изменение скорости прокси — это работа верёвки над кубом; отдаём её Havok импульсом m·Δv. */
   private pushTarget(target: PhysicsBody): void {
+    // Импульсы к статичному телу не применяются — не тратим кадр впустую.
+    if (this.particles.inverseMass[this.proxy] === 0) {
+      return;
+    }
+
     this.particles.readToRef(this.particles.velocity, this.proxy, this.velocity);
     this.velocity.subtractInPlace(this.targetVelocity).scaleInPlace(GameConfig.throwable.body.mass);
 

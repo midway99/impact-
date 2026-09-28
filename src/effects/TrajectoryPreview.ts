@@ -60,7 +60,6 @@ export class TrajectoryPreview {
     this.dot.thinInstanceBufferUpdated("matrix");
   }
 
-  /** Идёт по параболе шагами времени; на каждом отрезке луч ищет препятствие. Возвращает число точек. */
   private traceDots(): number {
     const { dotCount, timeStep } = GameConfig.trajectory;
 

@@ -32,6 +32,8 @@ export class ThrowableCube {
       scene,
     );
     this.aggregate.shape.filterMembershipMask = CollisionGroup.Cube;
+    // Без этого тело не присылает события столкновений.
+    this.aggregate.body.setCollisionCallbackEnabled(true);
 
     this.park();
   }

@@ -22,12 +22,19 @@ export class RopeSolver {
   private readonly proxy: number;
   private readonly segmentLength: number;
   private readonly anchor = new Vector3();
+  /** Квадрат самой большой скорости частицы в прошлом шаге — по нему верёвка засыпает. */
+  private fastestSpeedSquared = 0;
 
   public constructor(particles: ParticleBuffer, colliders: readonly RopeCollider[]) {
     this.particles = particles;
     this.colliders = colliders;
     this.proxy = particles.count - 1;
     this.segmentLength = GameConfig.rope.length / this.proxy;
+  }
+
+  /** Насколько быстро двигалась верёвка в прошлом шаге: 0 — стоит на месте. */
+  public get motion(): number {
+    return this.fastestSpeedSquared;
   }
 
   public simulate(frameDt: number, anchorFrom: Vector3, anchorTo: Vector3): void {
@@ -78,7 +85,11 @@ export class RopeSolver {
 
   private clampSpeed(offset: number, maxSpeed: number): void {
     const v = this.particles.velocity;
-    const speed = Math.hypot(v[offset]!, v[offset + 1]!, v[offset + 2]!);
+    const x = v[offset]!;
+    const y = v[offset + 1]!;
+    const z = v[offset + 2]!;
+    // Math.hypot заметно медленнее обычного корня, а защита от переполнения здесь не нужна.
+    const speed = Math.sqrt(x * x + y * y + z * z);
 
     if (speed > maxSpeed) {
       const scale = maxSpeed / speed;
@@ -153,6 +164,7 @@ export class RopeSolver {
   private updateVelocities(dt: number): void {
     const { position, previous, velocity, inverseMass, count } = this.particles;
     const damping = Math.max(0, 1 - GameConfig.rope.damping * dt);
+    let fastest = 0;
 
     for (let i = 0; i < count; i++) {
       if (inverseMass[i] === 0) {
@@ -161,9 +173,15 @@ export class RopeSolver {
       const o = i * PARTICLE_STRIDE;
       const factor = i === this.proxy ? 1 : damping;
 
+      let speedSquared = 0;
       for (let axis = 0; axis < PARTICLE_STRIDE; axis++) {
-        velocity[o + axis] = ((position[o + axis]! - previous[o + axis]!) / dt) * factor;
+        const value = ((position[o + axis]! - previous[o + axis]!) / dt) * factor;
+        velocity[o + axis] = value;
+        speedSquared += value * value;
       }
+      fastest = Math.max(fastest, speedSquared);
     }
+
+    this.fastestSpeedSquared = fastest;
   }
 }

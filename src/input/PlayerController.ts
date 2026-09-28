@@ -3,6 +3,7 @@ import { Axis } from "@babylonjs/core/Maths/math.axis";
 import { Vector3 } from "@babylonjs/core/Maths/math.vector";
 
 import type { Player } from "../entities/Player";
+import type { Rope } from "../entities/Rope";
 import { CameraAxes } from "./CameraAxes";
 import { KeyBinding } from "./KeyBinding";
 import type { KeyboardState } from "./KeyboardState";
@@ -12,20 +13,23 @@ export class PlayerController {
   private readonly camera: Camera;
   private readonly player: Player;
   private readonly keyboard: KeyboardState;
+  private readonly rope: Rope;
 
   // Scratch-вектора: переиспользуются каждый кадр, чтобы не мусорить в горячем пути.
   private readonly forward = new Vector3();
   private readonly right = new Vector3();
   private readonly direction = new Vector3();
 
-  public constructor(camera: Camera, player: Player, keyboard: KeyboardState) {
+  public constructor(camera: Camera, player: Player, keyboard: KeyboardState, rope: Rope) {
     this.camera = camera;
     this.player = player;
     this.keyboard = keyboard;
+    this.rope = rope;
   }
 
   public update(): void {
     this.readDirection();
+    this.rope.clampMovement(this.direction);
     this.player.move(this.direction);
   }
 

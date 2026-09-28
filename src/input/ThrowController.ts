@@ -24,7 +24,6 @@ export class ThrowController {
   public update(deltaSeconds: number): void {
     this.cooldownLeft = Math.max(0, this.cooldownLeft - deltaSeconds);
 
-    // Одно нажатие — один бросок; нажатие во время перезарядки пропадает.
     if (this.keyboard.consumePress(KeyBinding.Throw) && this.cooldownLeft === 0) {
       this.throwCube();
       this.cooldownLeft = GameConfig.throwable.cooldown;
@@ -36,7 +35,7 @@ export class ThrowController {
     const cube = this.cubes.launchNext(origin, velocity);
 
     if (cube) {
-      this.rope.launch(origin, velocity, cube);
+       this.rope.launch(origin, velocity, cube);
     }
   }
 }

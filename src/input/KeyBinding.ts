@@ -5,4 +5,6 @@ export enum KeyBinding {
   Left = "KeyA",
   Right = "KeyD",
   Throw = "KeyE",
+  /** Инспектор Babylon, только в разработке. */
+  Inspector = "Backquote",
 }

@@ -1,6 +1,8 @@
 import { Color3 } from "@babylonjs/core/Maths/math.color";
 import { Vector3 } from "@babylonjs/core/Maths/math.vector";
 
+import { CollisionGroup } from "../physics/CollisionGroup";
+
 export interface CameraConfig {
   /** Высота глаз над центром капсулы, м. */
   readonly eyeHeight: number;
@@ -66,6 +68,10 @@ export interface ThrowableConfig {
   /** Точка вылета: вперёд от центра персонажа и вверх, м. */
   readonly spawnForward: number;
   readonly spawnHeight: number;
+  /** Ниже этого импульса удар считается касанием и куб не примерзает. */
+  readonly impactImpulseThreshold: number;
+  /** Маска групп, удар о которые примораживает куб. */
+  readonly freezeOnGroups: number;
   readonly body: BodyConfig;
 }
 
@@ -89,6 +95,10 @@ export interface RopeConfig {
   readonly radius: number;
   /** Толщина отрисовки, м. */
   readonly thickness: number;
+  /** Точек сплайна на одно звено: 1 — ломаная по частицам, больше — глаже. */
+  readonly smoothing: number;
+  /** Граней в сечении трубки. */
+  readonly tessellation: number;
   readonly particleMass: number;
   /** Податливость растяжения, м/Н: 0 — нерастяжимая. */
   readonly stretchCompliance: number;
@@ -155,7 +165,7 @@ export const GameConfig: SceneConfig = {
     color: new Color3(0.78, 0.35, 0.28),
     x: 0,
     z: 6,
-    body: { mass: 6, friction: 0.5, restitution: 0.1 },
+    body: { mass: 0, friction: 0.5, restitution: 0.1 },
   },
   throwable: {
     size: 0.5,
@@ -166,6 +176,8 @@ export const GameConfig: SceneConfig = {
     cooldown: 0.2,
     spawnForward: 1.1,
     spawnHeight: 0.5,
+    impactImpulseThreshold: 2,
+    freezeOnGroups: CollisionGroup.Wall,
     body: { mass: 1, friction: 0.6, restitution: 0.2 },
   },
   trajectory: {
@@ -175,17 +187,19 @@ export const GameConfig: SceneConfig = {
     color: new Color3(1, 0.9, 0.45),
   },
   rope: {
-    particleCount: 32,
+    particleCount: 48,
     length: 7.5,
-    substeps: 15,
+    substeps: 10,
     radius: 0.05,
     thickness: 0.05,
+    smoothing: 3,
+    tessellation: 10,
     particleMass: 0.02,
     stretchCompliance: 0,
     bendCompliance: 0.01,
-    damping: 0.5,
+    damping: 2,
     friction: 0.6,
-    anchorOffset: new Vector3(0, 0.5, 0),
+    anchorOffset: new Vector3(0, 0.15, 0),
     color: new Color3(0.86, 0.76, 0.56),
   },
 };
