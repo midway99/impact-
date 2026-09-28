@@ -14,6 +14,7 @@ export class BoxCollider implements RopeCollider {
   private readonly halfExtents: Vector3;
   private readonly radius: number;
 
+  private readonly toWorld = new Matrix();
   private readonly toLocal = new Matrix();
   private readonly local = new Vector3();
   private readonly world = new Vector3();
@@ -25,7 +26,8 @@ export class BoxCollider implements RopeCollider {
   }
 
   public prepare(): void {
-    this.node.getWorldMatrix().invertToRef(this.toLocal);
+    this.toWorld.copyFrom(this.node.getWorldMatrix());
+    this.toWorld.invertToRef(this.toLocal);
   }
 
   public resolve(particles: ParticleBuffer, index: number): void {
@@ -44,7 +46,7 @@ export class BoxCollider implements RopeCollider {
       return;
     }
 
-    Vector3.TransformCoordinatesToRef(this.local, this.node.getWorldMatrix(), this.world);
+    Vector3.TransformCoordinatesToRef(this.local, this.toWorld, this.world);
     particles.write(position, index, this.world);
   }
 
