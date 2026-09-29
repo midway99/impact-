@@ -12,12 +12,18 @@ import { KeyboardState } from "../input/KeyboardState";
 import { PlayerController } from "../input/PlayerController";
 import { ThrowAim } from "../input/ThrowAim";
 import { ThrowController } from "../input/ThrowController";
+import { BoxCollider } from "../physics/rope/BoxCollider";
+import { GroundCollider } from "../physics/rope/GroundCollider";
 import { ImpactFreezer } from "../physics/ImpactFreezer";
+import type { RopeCollider } from "../physics/rope/RopeCollider";
 import { Arena } from "../scene/Arena";
 import { FirstPersonCamera } from "../scene/FirstPersonCamera";
 import { GameConfig } from "./GameConfig";
 
 const MS_PER_SECOND = 1000;
+/** PhysicsEngine._step обрезает шаг Havok сверху этим значением, с. */
+const MAX_PHYSICS_STEP_SECONDS = 0.1;
+const GROUND_HEIGHT = 0;
 
 /** Владелец движка, сцены и игрового цикла. Логика сущностей живёт в отдельных классах. */
 export class Game {
@@ -67,7 +73,7 @@ export class Game {
     this.wall = new TargetWall(this.scene);
     this.cubes = new CubePool(this.scene, physics);
     this.freezer = new ImpactFreezer(physics);
-    this.rope = new Rope(this.player);
+    this.rope = new Rope(this.player, this.createRopeColliders());
     this.ropeView = new RopeRenderer(this.scene, this.rope);
 
     const camera = this.view.camera;
@@ -108,8 +114,24 @@ export class Game {
   }
 
   private stepRope(): void {
-    this.rope.update();
+    this.rope.update(this.physicsStepSeconds());
     this.ropeView.update();
+  }
+
+  /** Тот же шаг, с которым Babylon только что шагнул Havok: дельта кадра, обрезанная как в Scene и PhysicsEngine. */
+  private physicsStepSeconds(): number {
+    const deltaMs = Math.max(Scene.MinDeltaTime, Math.min(this.engine.getDeltaTime(), Scene.MaxDeltaTime));
+
+    return Math.min(deltaMs / MS_PER_SECOND, MAX_PHYSICS_STEP_SECONDS);
+  }
+
+  private createRopeColliders(): readonly RopeCollider[] {
+    const { radius, friction } = GameConfig.rope;
+
+    return [
+      new GroundCollider(GROUND_HEIGHT, radius, friction),
+      new BoxCollider(this.wall.transform, this.wall.halfExtents, radius),
+    ];
   }
 
   public dispose(): void {
