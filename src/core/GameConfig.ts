@@ -95,29 +95,16 @@ export interface TrajectoryConfig {
 }
 
 export interface RopeConfig {
-  /** Частиц верёвки, включая якорь на руке; прокси куба добавляется сверху. */
-  readonly particleCount: number;
-  /** Длина верёвки от руки до куба, м. */
+  /** Точек пути от руки до куба, включая оба конца. */
+  readonly pointCount: number;
+  /** На сколько метров верёвка отпускает персонажа от примёрзшего куба. */
   readonly length: number;
-  /** Подшагов решателя на кадр: больше — жёстче и точнее верёвка. */
-  readonly substeps: number;
-  /** Радиус частицы для столкновений, м. */
-  readonly radius: number;
   /** Толщина отрисовки, м. */
   readonly thickness: number;
-  /** Точек сплайна на одно звено: 1 — ломаная по частицам, больше — глаже. */
+  /** Точек сплайна на одно звено: 1 — ломаная по точкам, больше — глаже. */
   readonly smoothing: number;
   /** Граней в сечении трубки. */
   readonly tessellation: number;
-  readonly particleMass: number;
-  /** Податливость растяжения, м/Н: 0 — нерастяжимая. */
-  readonly stretchCompliance: number;
-  /** Податливость изгиба, м/Н: больше — мягче верёвка. */
-  readonly bendCompliance: number;
-  /** Затухание скорости частиц, 1/с. */
-  readonly damping: number;
-  /** Трение о пол: доля горизонтального смещения, гасимая за подшаг (0..1). */
-  readonly friction: number;
   /** Точка крепления на персонаже относительно его центра. */
   readonly anchorOffset: Vector3;
   readonly color: Color3;
@@ -202,18 +189,12 @@ export const GameConfig: SceneConfig = {
     color: new Color3(1, 0.9, 0.45),
   },
   rope: {
-    particleCount: 48,
+    // Прямой верёвке промежуточные точки не нужны: трубка строится по двум концам.
+    pointCount: 2,
     length: 7.5,
-    substeps: 10,
-    radius: 0.05,
     thickness: 0.05,
-    smoothing: 3,
+    smoothing: 1,
     tessellation: 10,
-    particleMass: 0.02,
-    stretchCompliance: 0,
-    bendCompliance: 0.01,
-    damping: 2,
-    friction: 0.6,
     anchorOffset: new Vector3(0, 0.15, 0),
     color: new Color3(0.86, 0.76, 0.56),
   },

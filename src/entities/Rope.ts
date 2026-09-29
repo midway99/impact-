@@ -3,44 +3,40 @@ import { PhysicsMotionType } from "@babylonjs/core/Physics/v2/IPhysicsEnginePlug
 import type { PhysicsBody } from "@babylonjs/core/Physics/v2/physicsBody";
 
 import { GameConfig } from "../core/GameConfig";
-import { ParticleBuffer } from "../physics/rope/ParticleBuffer";
-import type { RopeCollider } from "../physics/rope/RopeCollider";
-import { RopeSolver } from "../physics/rope/RopeSolver";
 import type { Player } from "./Player";
 
+/** Координат на точку пути: x, y, z подряд. */
+const AXIS = 3;
+
 /**
- * Верёвка на собственном XPBD-решателе; Havok остаётся для куба, персонажа и окружения.
- * Частица 0 — рука персонажа, последняя — прокси брошенного куба:
- * перед шагом верёвка читает состояние куба из Havok, после — возвращает своё влияние импульсом.
+ * Верёвка без собственной физики: прямая от руки персонажа до брошенного куба.
+ * Куб летит сам по себе в Havok, верёвка лишь тянется за ним и не даёт отойти дальше своей длины.
+ *
+ * Путь переписывается только когда концы действительно сдвинулись: у неподвижной
+ * верёвки нет ни расчёта, ни перестройки геометрии.
  */
 export class Rope {
   private readonly player: Player;
-  private readonly particles: ParticleBuffer;
-  private readonly solver: RopeSolver;
-  private readonly proxy: number;
+  private readonly count: number;
+  /** Точки пути в плоском массиве: ни одного объекта на точку. */
+  private readonly points: Float32Array;
 
   private target: PhysicsBody | null = null;
   private stateRevision = 0;
+  private dirty = false;
 
-  private readonly anchorFrom = new Vector3();
-  private readonly anchorTo = new Vector3();
-  private readonly point = new Vector3();
-  private readonly velocity = new Vector3();
-  private readonly targetVelocity = new Vector3();
+  private readonly anchor = new Vector3();
+  private readonly end = new Vector3();
+  private readonly lastAnchor = new Vector3();
+  private readonly lastEnd = new Vector3();
   private readonly outward = new Vector3();
-  /** Квадрат скорости, ниже которой движение считается покоем: 0.1 м/с — 1.6 мм за кадр. */
-  private static readonly REST_SPEED_SQUARED = 0.01;
+  /** Квадрат сдвига конца, ниже которого путь считается прежним: 1 мм. */
+  private static readonly MOVED_SQUARED = 1e-6;
 
-  public constructor(player: Player, colliders: readonly RopeCollider[]) {
+  public constructor(player: Player) {
     this.player = player;
-    this.particles = new ParticleBuffer(GameConfig.rope.particleCount + 1);
-    this.proxy = this.particles.count - 1;
-    this.solver = new RopeSolver(this.particles, colliders);
-
-    const inverseMass = this.particles.inverseMass;
-    inverseMass.fill(1 / GameConfig.rope.particleMass);
-    inverseMass[0] = 0;
-    inverseMass[this.proxy] = 1 / GameConfig.throwable.body.mass;
+    this.count = GameConfig.rope.pointCount;
+    this.points = new Float32Array(this.count * AXIS);
   }
 
   /** До первого броска верёвки нет. */
@@ -48,40 +44,26 @@ export class Rope {
     return this.target !== null;
   }
 
-  /** Точки для отрисовки: рука, частицы, куб. */
+  /** Точки для отрисовки: рука, промежуточные, куб. */
   public get pointCount(): number {
-    return this.particles.count;
+    return this.count;
   }
 
-  /** Меняется только когда позиции частиц могли измениться. */
+  /** Меняется только когда путь мог измениться. */
   public get revision(): number {
     return this.stateRevision;
   }
 
   public copyPointTo(index: number, result: Vector3): void {
-    this.particles.readToRef(this.particles.position, index, result);
+    const at = index * AXIS;
+
+    result.set(this.points[at]!, this.points[at + 1]!, this.points[at + 2]!);
   }
 
-  /** Бросок: частицы выстраиваются от руки до точки вылета и летят вслед за кубом. */
-  public launch(origin: Vector3, velocity: Vector3, target: PhysicsBody): void {
-    const { position, previous, velocity: velocities } = this.particles;
-
-    this.anchorToRef(this.anchorTo);
-    this.anchorFrom.copyFrom(this.anchorTo);
-
-    for (let i = 0; i <= this.proxy; i++) {
-      // Частица ближе к кубу летит быстрее: верёвка разматывается, а не летит комом.
-      const share = i / this.proxy;
-      Vector3.LerpToRef(this.anchorTo, origin, share, this.point);
-      velocity.scaleToRef(share, this.velocity);
-
-      this.particles.write(position, i, this.point);
-      this.particles.write(previous, i, this.point);
-      this.particles.write(velocities, i, this.velocity);
-    }
-
+  /** Бросок: верёвка цепляется за улетевший куб. */
+  public launch(target: PhysicsBody): void {
     this.target = target;
-    this.stateRevision++;
+    this.dirty = true;
   }
 
   /**
@@ -94,8 +76,8 @@ export class Rope {
       return;
     }
 
-    this.anchorToRef(this.anchorTo);
-    this.anchorTo.subtractToRef(this.target.transformNode.position, this.outward);
+    this.anchorToRef(this.anchor);
+    this.anchor.subtractToRef(this.target.transformNode.position, this.outward);
 
     const distance = this.outward.length();
     if (distance < GameConfig.rope.length || distance === 0) {
@@ -110,63 +92,49 @@ export class Rope {
     }
   }
 
-  /** Шаг верёвки сразу после шага Havok и с тем же `dt`. */
-  public update(stepSeconds: number): void {
+  /** Обновление сразу после шага Havok: куб уже на новом месте. */
+  public update(): void {
     if (!this.target) {
       return;
     }
 
-    this.anchorFrom.copyFrom(this.anchorTo);
-    this.anchorToRef(this.anchorTo);
+    this.anchorToRef(this.anchor);
+    this.end.copyFrom(this.target.transformNode.position);
 
-    this.readTarget(this.target);
-
-    // Покоящуюся верёвку считать незачем: ни рука, ни куб, ни сами частицы не двигаются.
-    if (this.isAtRest()) {
+    if (!this.dirty && !this.endsMoved()) {
       return;
     }
 
-    this.solver.simulate(stepSeconds, this.anchorFrom, this.anchorTo);
-    this.pushTarget(this.target);
+    this.writeLine();
+    this.lastAnchor.copyFrom(this.anchor);
+    this.lastEnd.copyFrom(this.end);
+    this.dirty = false;
     this.stateRevision++;
   }
 
-  private isAtRest(): boolean {
-    const rest = Rope.REST_SPEED_SQUARED;
+  private endsMoved(): boolean {
+    const moved = Rope.MOVED_SQUARED;
 
     return (
-      this.solver.motion < rest &&
-      this.targetVelocity.lengthSquared() < rest &&
-      Vector3.DistanceSquared(this.anchorFrom, this.anchorTo) < rest
+      Vector3.DistanceSquared(this.anchor, this.lastAnchor) > moved ||
+      Vector3.DistanceSquared(this.end, this.lastEnd) > moved
     );
   }
 
-  /** Прокси = куб в том состоянии, которое Havok только что посчитал. */
-  private readTarget(target: PhysicsBody): void {
-    const { position, previous, velocity } = this.particles;
-    const cube = target.transformNode.position;
+  /** Равномерные точки от руки до куба. */
+  private writeLine(): void {
+    const last = this.count - 1;
+    const stepX = (this.end.x - this.anchor.x) / last;
+    const stepY = (this.end.y - this.anchor.y) / last;
+    const stepZ = (this.end.z - this.anchor.z) / last;
 
-    this.particles.write(position, this.proxy, cube);
-    this.particles.write(previous, this.proxy, cube);
-    target.getLinearVelocityToRef(this.targetVelocity);
-    this.particles.write(velocity, this.proxy, this.targetVelocity);
+    for (let i = 0; i < this.count; i++) {
+      const at = i * AXIS;
 
-    // Примёрзший куб верёвка сдвинуть не может: для решателя он закреплён, как рука.
-    const isFrozen = target.getMotionType() === PhysicsMotionType.STATIC;
-    this.particles.inverseMass[this.proxy] = isFrozen ? 0 : 1 / GameConfig.throwable.body.mass;
-  }
-
-  /** Изменение скорости прокси — это работа верёвки над кубом; отдаём её Havok импульсом m·Δv. */
-  private pushTarget(target: PhysicsBody): void {
-    // Импульсы к статичному телу не применяются — не тратим кадр впустую.
-    if (this.particles.inverseMass[this.proxy] === 0) {
-      return;
+      this.points[at] = this.anchor.x + stepX * i;
+      this.points[at + 1] = this.anchor.y + stepY * i;
+      this.points[at + 2] = this.anchor.z + stepZ * i;
     }
-
-    this.particles.readToRef(this.particles.velocity, this.proxy, this.velocity);
-    this.velocity.subtractInPlace(this.targetVelocity).scaleInPlace(GameConfig.throwable.body.mass);
-
-    target.applyImpulse(this.velocity, target.transformNode.position);
   }
 
   private anchorToRef(result: Vector3): void {
