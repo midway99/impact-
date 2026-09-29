@@ -1,9 +1,9 @@
-import type { RopePath } from "./RopePath";
+import type { ParticleBuffer } from "./ParticleBuffer";
 
-/** Препятствие для верёвки. Работает по позициям: скорость решатель выведет сам. */
+/** Препятствие для частиц верёвки. */
 export interface RopeCollider {
-  /** Вызывается раз в кадр: сюда прячется всё, что не меняется между подшагами. */
+  /** Раз в кадр перед подшагами: обновить кэш (матрицы и т.п.). */
   prepare(): void;
-  /** Возвращает точку пути наружу препятствия, если она внутрь попала. */
-  resolve(path: RopePath, index: number): void;
+  /** Вытолкнуть частицу `index` наружу, если она внутри. */
+  resolve(particles: ParticleBuffer, index: number): void;
 }

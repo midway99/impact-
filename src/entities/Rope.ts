@@ -3,20 +3,20 @@ import { PhysicsMotionType } from "@babylonjs/core/Physics/v2/IPhysicsEnginePlug
 import type { PhysicsBody } from "@babylonjs/core/Physics/v2/physicsBody";
 
 import { GameConfig } from "../core/GameConfig";
+import { ParticleBuffer } from "../physics/rope/ParticleBuffer";
 import type { RopeCollider } from "../physics/rope/RopeCollider";
-import { RopePath } from "../physics/rope/RopePath";
 import { RopeSolver } from "../physics/rope/RopeSolver";
 import { SelfCollision } from "../physics/rope/SelfCollision";
 import type { Player } from "./Player";
 
 /**
- * Верёвка на XPBD-решателе; Havok остаётся для куба, персонажа и окружения.
- * Точка 0 пути — рука персонажа, последняя — брошенный куб: перед шагом верёвка
- * читает его состояние из Havok, после — возвращает своё влияние импульсом.
+ * Верёвка на собственном XPBD-решателе; Havok остаётся для куба, персонажа и окружения.
+ * Частица 0 — рука персонажа, последняя — прокси брошенного куба:
+ * перед шагом верёвка читает состояние куба из Havok, после — возвращает своё влияние импульсом.
  */
 export class Rope {
   private readonly player: Player;
-  private readonly rope: RopePath;
+  private readonly particles: ParticleBuffer;
   private readonly solver: RopeSolver;
   private readonly proxy: number;
 
@@ -25,6 +25,7 @@ export class Rope {
 
   private readonly anchorFrom = new Vector3();
   private readonly anchorTo = new Vector3();
+  private readonly point = new Vector3();
   private readonly velocity = new Vector3();
   private readonly targetVelocity = new Vector3();
   private readonly outward = new Vector3();
@@ -32,19 +33,17 @@ export class Rope {
   private static readonly REST_SPEED_SQUARED = 0.01;
 
   public constructor(player: Player, colliders: readonly RopeCollider[]) {
-    const { pointCount, nodeMass, selfDistance } = GameConfig.rope;
-
     this.player = player;
-    this.rope = new RopePath(pointCount);
-    this.proxy = this.rope.count - 1;
+    this.particles = new ParticleBuffer(GameConfig.rope.particleCount + 1);
+    this.proxy = this.particles.count - 1;
     this.solver = new RopeSolver(
-      this.rope,
+      this.particles,
       colliders,
-      new SelfCollision(this.rope.count, selfDistance),
+      new SelfCollision(this.particles.count, GameConfig.rope.selfDistance),
     );
 
-    const inverseMass = this.rope.inverseMass;
-    inverseMass.fill(1 / nodeMass);
+    const inverseMass = this.particles.inverseMass;
+    inverseMass.fill(1 / GameConfig.rope.particleMass);
     inverseMass[0] = 0;
     inverseMass[this.proxy] = 1 / GameConfig.throwable.body.mass;
   }
@@ -54,30 +53,36 @@ export class Rope {
     return this.target !== null;
   }
 
-  /** Путь трубки: тот самый массив, который двигает решатель. */
-  public get path(): Vector3[] {
-    return this.rope.points;
+  /** Точки для отрисовки: рука, частицы, куб. */
+  public get pointCount(): number {
+    return this.particles.count;
   }
 
-  /** Меняется только когда путь мог измениться. */
+  /** Меняется только когда позиции частиц могли измениться. */
   public get revision(): number {
     return this.stateRevision;
   }
 
-  /** Бросок: путь выстраивается от руки до точки вылета и летит вслед за кубом. */
+  public copyPointTo(index: number, result: Vector3): void {
+    this.particles.readToRef(this.particles.position, index, result);
+  }
+
+  /** Бросок: частицы выстраиваются от руки до точки вылета и летят вслед за кубом. */
   public launch(origin: Vector3, velocity: Vector3, target: PhysicsBody): void {
-    const { points, previous, velocity: velocities } = this.rope;
+    const { position, previous, velocity: velocities } = this.particles;
 
     this.anchorToRef(this.anchorTo);
     this.anchorFrom.copyFrom(this.anchorTo);
 
     for (let i = 0; i <= this.proxy; i++) {
-      // Точка ближе к кубу летит быстрее: верёвка разматывается, а не летит комом.
+      // Частица ближе к кубу летит быстрее: верёвка разматывается, а не летит комом.
       const share = i / this.proxy;
+      Vector3.LerpToRef(this.anchorTo, origin, share, this.point);
+      velocity.scaleToRef(share, this.velocity);
 
-      Vector3.LerpToRef(this.anchorTo, origin, share, points[i]!);
-      previous[i]!.copyFrom(points[i]!);
-      velocity.scaleToRef(share, velocities[i]!);
+      this.particles.write(position, i, this.point);
+      this.particles.write(previous, i, this.point);
+      this.particles.write(velocities, i, this.velocity);
     }
 
     this.target = target;
@@ -121,7 +126,7 @@ export class Rope {
 
     this.readTarget(this.target);
 
-    // Покоящуюся верёвку считать незачем: ни рука, ни куб, ни сам путь не двигаются.
+    // Покоящуюся верёвку считать незачем: ни рука, ни куб, ни сами частицы не двигаются.
     if (this.isAtRest()) {
       return;
     }
@@ -141,29 +146,30 @@ export class Rope {
     );
   }
 
-  /** Последняя точка пути = куб в том состоянии, которое Havok только что посчитал. */
+  /** Прокси = куб в том состоянии, которое Havok только что посчитал. */
   private readTarget(target: PhysicsBody): void {
+    const { position, previous, velocity } = this.particles;
     const cube = target.transformNode.position;
 
-    this.rope.points[this.proxy]!.copyFrom(cube);
-    this.rope.previous[this.proxy]!.copyFrom(cube);
+    this.particles.write(position, this.proxy, cube);
+    this.particles.write(previous, this.proxy, cube);
     target.getLinearVelocityToRef(this.targetVelocity);
-    this.rope.velocity[this.proxy]!.copyFrom(this.targetVelocity);
+    this.particles.write(velocity, this.proxy, this.targetVelocity);
 
     // Примёрзший куб верёвка сдвинуть не может: для решателя он закреплён, как рука.
     const isFrozen = target.getMotionType() === PhysicsMotionType.STATIC;
-    this.rope.inverseMass[this.proxy] = isFrozen ? 0 : 1 / GameConfig.throwable.body.mass;
+    this.particles.inverseMass[this.proxy] = isFrozen ? 0 : 1 / GameConfig.throwable.body.mass;
   }
 
-  /** Изменение скорости последней точки — это работа верёвки над кубом; отдаём её Havok импульсом m·Δv. */
+  /** Изменение скорости прокси — это работа верёвки над кубом; отдаём её Havok импульсом m·Δv. */
   private pushTarget(target: PhysicsBody): void {
     // Импульсы к статичному телу не применяются — не тратим кадр впустую.
-    if (this.rope.inverseMass[this.proxy] === 0) {
+    if (this.particles.inverseMass[this.proxy] === 0) {
       return;
     }
 
-    this.rope.velocity[this.proxy]!.subtractToRef(this.targetVelocity, this.velocity);
-    this.velocity.scaleInPlace(GameConfig.throwable.body.mass);
+    this.particles.readToRef(this.particles.velocity, this.proxy, this.velocity);
+    this.velocity.subtractInPlace(this.targetVelocity).scaleInPlace(GameConfig.throwable.body.mass);
 
     target.applyImpulse(this.velocity, target.transformNode.position);
   }

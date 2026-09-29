@@ -95,28 +95,31 @@ export interface TrajectoryConfig {
 }
 
 export interface RopeConfig {
-  /** Точек пути трубки, включая рукоять и куб; они же узлы решателя. */
-  readonly pointCount: number;
+  /** Частиц верёвки, включая якорь на руке; прокси куба добавляется сверху. */
+  readonly particleCount: number;
   /** Длина верёвки от руки до куба, м. */
   readonly length: number;
   /** Подшагов решателя на кадр: больше — жёстче и точнее верёвка. */
   readonly substeps: number;
-  /** Толщина верёвки, м: и для отрисовки, и для столкновений. */
+  /** Радиус частицы для столкновений с полом и стеной, м. */
+  readonly radius: number;
+  /** Минимальное расстояние между несоседними участками верёвки, м; 0 — не проверять. */
+  readonly selfDistance: number;
+  /** Толщина отрисовки, м. */
   readonly thickness: number;
+  /** Точек сплайна на одно звено: 1 — ломаная по частицам, больше — глаже. */
+  readonly smoothing: number;
   /** Граней в сечении трубки. */
   readonly tessellation: number;
-  /** Масса одной точки пути, кг. */
-  readonly nodeMass: number;
+  readonly particleMass: number;
   /** Податливость растяжения, м/Н: 0 — нерастяжимая. */
   readonly stretchCompliance: number;
   /** Податливость изгиба, м/Н: больше — мягче верёвка. */
   readonly bendCompliance: number;
-  /** Затухание скорости, 1/с. */
+  /** Затухание скорости частиц, 1/с. */
   readonly damping: number;
   /** Трение о пол: доля горизонтального смещения, гасимая за подшаг (0..1). */
   readonly friction: number;
-  /** Минимальное расстояние между несоседними участками верёвки, м; 0 — не проверять. */
-  readonly selfDistance: number;
   /** Точка крепления на персонаже относительно его центра. */
   readonly anchorOffset: Vector3;
   readonly color: Color3;
@@ -201,18 +204,19 @@ export const GameConfig: SceneConfig = {
     color: new Color3(1, 0.9, 0.45),
   },
   rope: {
-    // Они же узлы решателя: больше точек — глаже трубка и точнее физика, но дороже кадр.
-    pointCount: 32,
+    particleCount: 48,
     length: 7.5,
     substeps: 10,
+    radius: 0.05,
+    selfDistance: 0.05,
     thickness: 0.05,
+    smoothing: 3,
     tessellation: 10,
-    nodeMass: 0.02,
+    particleMass: 0.02,
     stretchCompliance: 0,
     bendCompliance: 0.01,
     damping: 2,
     friction: 0.6,
-    selfDistance: 0.05,
     anchorOffset: new Vector3(0, 0.15, 0),
     color: new Color3(0.86, 0.76, 0.56),
   },
