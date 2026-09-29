@@ -1,5 +1,6 @@
 import { StandardMaterial } from "@babylonjs/core/Materials/standardMaterial";
 import { CreateBox } from "@babylonjs/core/Meshes/Builders/boxBuilder";
+import { Vector3 } from "@babylonjs/core/Maths/math.vector";
 import type { Mesh } from "@babylonjs/core/Meshes/mesh";
 import { PhysicsAggregate } from "@babylonjs/core/Physics/v2/physicsAggregate";
 import { PhysicsShapeType } from "@babylonjs/core/Physics/v2/IPhysicsEnginePlugin";
@@ -13,11 +14,14 @@ export class TargetWall {
   private readonly mesh: Mesh;
   private readonly material: StandardMaterial;
   private readonly aggregate: PhysicsAggregate;
+  /** Половины габаритов в локальных осях — для коллайдера верёвки. */
+  public readonly halfExtents: Vector3;
 
   public constructor(scene: Scene) {
     const { width, height, depth, color, x, z } = GameConfig.wall;
 
     this.mesh = CreateBox("target-wall", { width, height, depth }, scene);
+    this.halfExtents = new Vector3(width / 2, height / 2, depth / 2);
     this.mesh.position.set(x, height / 2, z);
 
     this.material = new StandardMaterial("target-wall-material", scene);
@@ -33,6 +37,10 @@ export class TargetWall {
 
   public get body(): PhysicsAggregate {
     return this.aggregate;
+  }
+
+  public get transform(): Mesh {
+    return this.mesh;
   }
 
   public dispose(): void {
