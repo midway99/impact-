@@ -1,9 +1,8 @@
-import { PARTICLE_STRIDE } from "./ParticleBuffer";
-import type { ParticleBuffer } from "./ParticleBuffer";
 import type { RopeCollider } from "./RopeCollider";
+import type { RopePath } from "./RopePath";
 
 /**
- * Пол y = height. Трение — как в solveGroundCollisions у Мюллера:
+ * Пол y = height. Трение — как в `solveGroundCollisions` у Мюллера:
  * горизонтальное смещение за подшаг откатывается к прошлой позиции на долю `friction`.
  */
 export class GroundCollider implements RopeCollider {
@@ -19,16 +18,16 @@ export class GroundCollider implements RopeCollider {
     // Пол неподвижен — кэшировать нечего.
   }
 
-  public resolve(particles: ParticleBuffer, index: number): void {
-    const { position, previous } = particles;
-    const x = index * PARTICLE_STRIDE;
+  public resolve(path: RopePath, index: number): void {
+    const point = path.points[index]!;
 
-    if (position[x + 1]! >= this.surface) {
+    if (point.y >= this.surface) {
       return;
     }
 
-    position[x] = position[x]! - (position[x]! - previous[x]!) * this.friction;
-    position[x + 2] = position[x + 2]! - (position[x + 2]! - previous[x + 2]!) * this.friction;
-    position[x + 1] = this.surface;
+    const previous = path.previous[index]!;
+    point.x -= (point.x - previous.x) * this.friction;
+    point.z -= (point.z - previous.z) * this.friction;
+    point.y = this.surface;
   }
 }

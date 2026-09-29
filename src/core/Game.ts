@@ -12,9 +12,9 @@ import { KeyboardState } from "../input/KeyboardState";
 import { PlayerController } from "../input/PlayerController";
 import { ThrowAim } from "../input/ThrowAim";
 import { ThrowController } from "../input/ThrowController";
+import { ImpactFreezer } from "../physics/ImpactFreezer";
 import { BoxCollider } from "../physics/rope/BoxCollider";
 import { GroundCollider } from "../physics/rope/GroundCollider";
-import { ImpactFreezer } from "../physics/ImpactFreezer";
 import type { RopeCollider } from "../physics/rope/RopeCollider";
 import { Arena } from "../scene/Arena";
 import { FirstPersonCamera } from "../scene/FirstPersonCamera";
@@ -126,11 +126,11 @@ export class Game {
   }
 
   private createRopeColliders(): readonly RopeCollider[] {
-    const { radius, friction } = GameConfig.rope;
+    const { thickness, friction } = GameConfig.rope;
 
     return [
-      new GroundCollider(GROUND_HEIGHT, radius, friction),
-      new BoxCollider(this.wall.transform, this.wall.halfExtents, radius),
+      new GroundCollider(GROUND_HEIGHT, thickness / 2, friction),
+      new BoxCollider(this.wall.transform, this.wall.halfExtents, thickness / 2),
     ];
   }
 

@@ -1,13 +1,14 @@
 import { Matrix, Vector3 } from "@babylonjs/core/Maths/math.vector";
 import type { TransformNode } from "@babylonjs/core/Meshes/transformNode";
 
-import { PARTICLE_STRIDE } from "./ParticleBuffer";
-import type { ParticleBuffer } from "./ParticleBuffer";
 import type { RopeCollider } from "./RopeCollider";
+import type { RopePath } from "./RopePath";
 
 /**
  * Повёрнутый параллелепипед (стена может двигаться и опрокидываться).
- * Частица переводится в локальные координаты коробки и выталкивается по оси наименьшего проникновения.
+ * Точка переводится в локальные координаты коробки и выталкивается по оси наименьшего проникновения.
+ *
+ * У Мюллера такого коллайдера нет — он написан в той же идиоме: правим позицию, скорость следствие.
  */
 export class BoxCollider implements RopeCollider {
   private readonly node: TransformNode;
@@ -17,7 +18,6 @@ export class BoxCollider implements RopeCollider {
   private readonly toWorld = new Matrix();
   private readonly toLocal = new Matrix();
   private readonly local = new Vector3();
-  private readonly world = new Vector3();
 
   public constructor(node: TransformNode, halfExtents: Vector3, radius: number) {
     this.node = node;
@@ -30,24 +30,15 @@ export class BoxCollider implements RopeCollider {
     this.toWorld.invertToRef(this.toLocal);
   }
 
-  public resolve(particles: ParticleBuffer, index: number): void {
-    const { position } = particles;
-    const offset = index * PARTICLE_STRIDE;
+  public resolve(path: RopePath, index: number): void {
+    const point = path.points[index]!;
 
-    Vector3.TransformCoordinatesFromFloatsToRef(
-      position[offset]!,
-      position[offset + 1]!,
-      position[offset + 2]!,
-      this.toLocal,
-      this.local,
-    );
-
+    Vector3.TransformCoordinatesToRef(point, this.toLocal, this.local);
     if (!this.pushOut(this.local)) {
       return;
     }
 
-    Vector3.TransformCoordinatesToRef(this.local, this.toWorld, this.world);
-    particles.write(position, index, this.world);
+    Vector3.TransformCoordinatesToRef(this.local, this.toWorld, point);
   }
 
   /** Сдвигает локальную точку на ближайшую грань (с учётом радиуса). false — точка снаружи. */
