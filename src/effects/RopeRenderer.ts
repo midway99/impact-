@@ -1,19 +1,24 @@
-import { VertexBuffer } from "@babylonjs/core/Buffers/buffer";
+import { Buffer, VertexBuffer } from "@babylonjs/core/Buffers/buffer";
 import { StandardMaterial } from "@babylonjs/core/Materials/standardMaterial";
 import { Vector3 } from "@babylonjs/core/Maths/math.vector";
 import { Mesh } from "@babylonjs/core/Meshes/mesh";
-import { VertexData } from "@babylonjs/core/Meshes/mesh.vertexData";
 import type { Scene } from "@babylonjs/core/scene";
 
 import { GameConfig } from "../core/GameConfig";
 import type { Rope } from "../entities/Rope";
 
 const AXIS = 3;
+/** Позиция и нормаль лежат в одной вершине подряд: x y z nx ny nz. */
+const VERTEX_STRIDE = 6;
+const NORMAL_OFFSET = 3;
 
 /**
  * Верёвка рисуется трубкой с постоянной топологией: кольца вершин вдоль пути.
  * Индексы считаются один раз, в кадре переписываются только координаты и нормали —
  * ни аллокаций, ни пересборки геометрии.
+ *
+ * Позиции и нормали лежат в одном чередующемся буфере: на кадр приходится одна
+ * загрузка в видеопамять вместо двух, то есть вдвое меньше точек синхронизации с GPU.
  *
  * Путь сглаживается сплайном Катмулла — Рома: по самим частицам трубка была бы ломаной.
  */
@@ -21,11 +26,12 @@ export class RopeRenderer {
   private readonly rope: Rope;
   private readonly mesh: Mesh;
   private readonly material: StandardMaterial;
+  private readonly buffer: Buffer;
 
   private readonly rings: number;
   private readonly sides: number;
-  private readonly positions: Float32Array;
-  private readonly normals: Float32Array;
+  /** Чередующиеся вершины: та же память каждый кадр. */
+  private readonly vertices: Float32Array;
   /** Сглаженный путь: те же объекты каждый кадр. */
   private readonly path: readonly Vector3[];
   /** Смещения вершин сечения — считаются один раз. */
@@ -65,11 +71,10 @@ export class RopeRenderer {
       this.sines[side] = Math.sin(angle) * (thickness / 2);
     }
 
-    const vertices = this.rings * this.sides;
-    this.positions = new Float32Array(vertices * AXIS);
-    this.normals = new Float32Array(vertices * AXIS);
+    this.vertices = new Float32Array(this.rings * this.sides * VERTEX_STRIDE);
 
     this.mesh = new Mesh("rope", scene);
+    this.buffer = new Buffer(scene.getEngine(), this.vertices, true, VERTEX_STRIDE);
     this.buildGeometry();
     this.mesh.isPickable = false;
     this.mesh.isVisible = false;
@@ -96,8 +101,7 @@ export class RopeRenderer {
     this.buildPath();
     this.writeRings();
 
-    this.mesh.updateVerticesData(VertexBuffer.PositionKind, this.positions, false, false);
-    this.mesh.updateVerticesData(VertexBuffer.NormalKind, this.normals, false, false);
+    this.buffer.update(this.vertices);
     this.mesh.isVisible = true;
     this.renderedRevision = this.rope.revision;
   }
@@ -124,11 +128,10 @@ export class RopeRenderer {
       }
     }
 
-    const data = new VertexData();
-    data.positions = this.positions;
-    data.normals = this.normals;
-    data.indices = indices;
-    data.applyToMesh(this.mesh, true);
+    // Два вида на одну и ту же память: позиции с начала вершины, нормали со смещения.
+    this.mesh.setVerticesBuffer(this.buffer.createVertexBuffer(VertexBuffer.PositionKind, 0, AXIS));
+    this.mesh.setVerticesBuffer(this.buffer.createVertexBuffer(VertexBuffer.NormalKind, NORMAL_OFFSET, AXIS));
+    this.mesh.setIndices(indices, this.rings * this.sides);
   }
 
   /** Сплайн по частицам решателя: кривая проходит через них, но без изломов. */
@@ -206,12 +209,12 @@ export class RopeRenderer {
 
   private writeRing(ring: number): void {
     const centre = this.path[ring]!;
-    const base = ring * this.sides * AXIS;
+    const base = ring * this.sides * VERTEX_STRIDE;
 
     for (let side = 0; side < this.sides; side++) {
       const cos = this.cosines[side]!;
       const sin = this.sines[side]!;
-      const at = base + side * AXIS;
+      const at = base + side * VERTEX_STRIDE;
 
       this.radial.set(
         this.normal.x * cos + this.binormal.x * sin,
@@ -219,20 +222,22 @@ export class RopeRenderer {
         this.normal.z * cos + this.binormal.z * sin,
       );
 
-      this.positions[at] = centre.x + this.radial.x;
-      this.positions[at + 1] = centre.y + this.radial.y;
-      this.positions[at + 2] = centre.z + this.radial.z;
+      this.vertices[at] = centre.x + this.radial.x;
+      this.vertices[at + 1] = centre.y + this.radial.y;
+      this.vertices[at + 2] = centre.z + this.radial.z;
 
       // Нормаль смотрит наружу от оси трубки — отсюда мягкое затенение вдоль верёвки.
       const inverseRadius = 1 / this.radial.length();
-      this.normals[at] = this.radial.x * inverseRadius;
-      this.normals[at + 1] = this.radial.y * inverseRadius;
-      this.normals[at + 2] = this.radial.z * inverseRadius;
+      this.vertices[at + NORMAL_OFFSET] = this.radial.x * inverseRadius;
+      this.vertices[at + NORMAL_OFFSET + 1] = this.radial.y * inverseRadius;
+      this.vertices[at + NORMAL_OFFSET + 2] = this.radial.z * inverseRadius;
     }
   }
 
   public dispose(): void {
     this.material.dispose();
     this.mesh.dispose();
+    // Буфер создан вручную, меш им не владеет и сам не освободит.
+    this.buffer.dispose();
   }
 }

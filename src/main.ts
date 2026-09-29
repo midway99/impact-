@@ -14,6 +14,5 @@ const physics = await HavokPhysicsLoader.load();
 const game = new Game(canvas, physics);
 
 game.start();
-Reflect.set(window, "__game", game); // TEMP-DEBUG
 
 window.addEventListener("beforeunload", () => game.dispose());
