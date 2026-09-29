@@ -35,7 +35,7 @@ export class ThrowController {
     const cube = this.cubes.launchNext(origin, velocity);
 
     if (cube) {
-      this.rope.launch(cube);
+      this.rope.launch(origin, velocity, cube);
     }
   }
 }
