@@ -95,28 +95,18 @@ export interface TrajectoryConfig {
 }
 
 export interface RopeConfig {
-  /** Точек пути трубки, включая рукоять и куб; они же узлы решателя. */
+  /** Точек пути от руки до куба, включая оба конца. */
   readonly pointCount: number;
-  /** Длина верёвки от руки до куба, м. */
+  /** На сколько метров верёвка отпускает персонажа от примёрзшего куба; она же длина дуги. */
   readonly length: number;
-  /** Подшагов решателя на кадр: больше — жёстче и точнее верёвка. */
-  readonly substeps: number;
-  /** Толщина верёвки, м: и для отрисовки, и для столкновений. */
+  /** Доля провисания: 0 — натянутая струна, 1 — как настоящая верёвка такой длины. */
+  readonly sag: number;
+  /** Толщина отрисовки, м. */
   readonly thickness: number;
+  /** Точек сплайна на одно звено: 1 — ломаная по точкам, больше — глаже. */
+  readonly smoothing: number;
   /** Граней в сечении трубки. */
   readonly tessellation: number;
-  /** Масса одной точки пути, кг. */
-  readonly nodeMass: number;
-  /** Податливость растяжения, м/Н: 0 — нерастяжимая. */
-  readonly stretchCompliance: number;
-  /** Податливость изгиба, м/Н: больше — мягче верёвка. */
-  readonly bendCompliance: number;
-  /** Затухание скорости, 1/с. */
-  readonly damping: number;
-  /** Трение о пол: доля горизонтального смещения, гасимая за подшаг (0..1). */
-  readonly friction: number;
-  /** Минимальное расстояние между несоседними участками верёвки, м; 0 — не проверять. */
-  readonly selfDistance: number;
   /** Точка крепления на персонаже относительно его центра. */
   readonly anchorOffset: Vector3;
   readonly color: Color3;
@@ -201,18 +191,13 @@ export const GameConfig: SceneConfig = {
     color: new Color3(1, 0.9, 0.45),
   },
   rope: {
-    // Они же узлы решателя: больше точек — глаже трубка и точнее физика, но дороже кадр.
-    pointCount: 32,
+    // Точек хватает, чтобы провис читался дугой, а не изломом.
+    pointCount: 12,
     length: 7.5,
-    substeps: 10,
+    sag: 1,
     thickness: 0.05,
+    smoothing: 2,
     tessellation: 10,
-    nodeMass: 0.02,
-    stretchCompliance: 0,
-    bendCompliance: 0.01,
-    damping: 2,
-    friction: 0.6,
-    selfDistance: 0.05,
     anchorOffset: new Vector3(0, 0.15, 0),
     color: new Color3(0.86, 0.76, 0.56),
   },
