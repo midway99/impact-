@@ -97,8 +97,10 @@ export interface TrajectoryConfig {
 export interface RopeConfig {
   /** Точек пути от руки до куба, включая оба конца. */
   readonly pointCount: number;
-  /** На сколько метров верёвка отпускает персонажа от примёрзшего куба. */
+  /** На сколько метров верёвка отпускает персонажа от примёрзшего куба; она же длина дуги. */
   readonly length: number;
+  /** Доля провисания: 0 — натянутая струна, 1 — как настоящая верёвка такой длины. */
+  readonly sag: number;
   /** Толщина отрисовки, м. */
   readonly thickness: number;
   /** Точек сплайна на одно звено: 1 — ломаная по точкам, больше — глаже. */
@@ -189,11 +191,12 @@ export const GameConfig: SceneConfig = {
     color: new Color3(1, 0.9, 0.45),
   },
   rope: {
-    // Прямой верёвке промежуточные точки не нужны: трубка строится по двум концам.
-    pointCount: 2,
+    // Точек хватает, чтобы провис читался дугой, а не изломом.
+    pointCount: 12,
     length: 7.5,
+    sag: 1,
     thickness: 0.05,
-    smoothing: 1,
+    smoothing: 2,
     tessellation: 10,
     anchorOffset: new Vector3(0, 0.15, 0),
     color: new Color3(0.86, 0.76, 0.56),
