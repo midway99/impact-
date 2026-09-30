@@ -127,10 +127,6 @@ export interface RopeConfig {
   readonly specular: Color3;
   /** Резкость блика: чем меньше, тем более рассеянный и матовый материал. */
   readonly specularPower: number;
-  /** Прядей в витье. */
-  readonly strands: number;
-  /** Витков пряди на всю длину верёвки: чем больше, тем мельче навивка. */
-  readonly twists: number;
 }
 
 export interface SceneConfig {
@@ -228,10 +224,8 @@ export const GameConfig: SceneConfig = {
     damping: 3.5,
     friction: 0.4,
     anchorOffset: new Vector3(0, 0.15, 0),
-    color: new Color3(0.98, 0.72, 0.12),
-    specular: new Color3(0.18, 0.16, 0.1),
-    specularPower: 12,
-    strands: 3,
-    twists: 90,
+    color: new Color3(0.72, 0.61, 0.43),
+    specular: new Color3(0.12, 0.11, 0.09),
+    specularPower: 8,
   },
 };
