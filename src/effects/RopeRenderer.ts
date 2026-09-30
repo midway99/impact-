@@ -1,4 +1,5 @@
 import { StandardMaterial } from "@babylonjs/core/Materials/standardMaterial";
+import type { DynamicTexture } from "@babylonjs/core/Materials/Textures/dynamicTexture";
 import { Vector3 } from "@babylonjs/core/Maths/math.vector";
 import { CreateTube } from "@babylonjs/core/Meshes/Builders/tubeBuilder";
 import type { Mesh } from "@babylonjs/core/Meshes/mesh";
@@ -6,6 +7,7 @@ import type { Scene } from "@babylonjs/core/scene";
 
 import { GameConfig } from "../core/GameConfig";
 import type { Rope } from "../entities/Rope";
+import { RopeTexture } from "./RopeTexture";
 
 const MESH_NAME = "rope";
 
@@ -20,6 +22,7 @@ const MESH_NAME = "rope";
 export class RopeRenderer {
   private readonly rope: Rope;
   private readonly material: StandardMaterial;
+  private readonly texture: DynamicTexture;
   private mesh: Mesh;
 
   private readonly rings: number;
@@ -58,7 +61,11 @@ export class RopeRenderer {
     this.mesh.alwaysSelectAsActiveMesh = true;
 
     this.material = new StandardMaterial("rope-material", scene);
-    this.material.diffuseColor = color;
+    this.texture = RopeTexture.create(scene, color, GameConfig.rope.strands);
+    // У трубки Babylon вдоль пути идёт U, поперёк — V: витьё повторяем по U,
+    // а по кругу ровно один раз, иначе узор разойдётся на шве.
+    this.texture.uScale = GameConfig.rope.twists;
+    this.material.diffuseTexture = this.texture;
     this.material.specularColor = specular;
     this.material.specularPower = specularPower;
     this.mesh.material = this.material;
@@ -119,6 +126,7 @@ export class RopeRenderer {
   }
 
   public dispose(): void {
+    this.texture.dispose();
     this.material.dispose();
     this.mesh.dispose();
   }
