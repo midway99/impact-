@@ -62,6 +62,11 @@ export class Player {
     body.setLinearVelocity(this.velocity);
   }
 
+  /** Полёт на верёвке: скорость задаётся целиком, включая вертикаль — гравитация ей не мешает. */
+  public pull(velocity: Vector3): void {
+    this.aggregate.body.setLinearVelocity(velocity);
+  }
+
   /** Возврат в точку старта: тело телепортируется и теряет накопленную скорость. */
   public reset(): void {
     this.mesh.position.copyFrom(GameConfig.player.spawn);

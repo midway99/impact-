@@ -63,6 +63,18 @@ export class Rope {
     return this.particles.count;
   }
 
+  /**
+   * Место, за которое верёвка держится, или `null`, пока куб летит.
+   * Примёрзший к стене куб для верёвки неподвижен — это и есть крепление.
+   */
+  public get attachment(): Vector3 | null {
+    if (!this.target || this.target.getMotionType() !== PhysicsMotionType.STATIC) {
+      return null;
+    }
+
+    return this.target.transformNode.position;
+  }
+
   /** Меняется только когда позиции частиц могли измениться. */
   public get revision(): number {
     return this.stateRevision;
@@ -100,12 +112,13 @@ export class Rope {
    */
   public clampMovement(direction: Vector3): void {
     // Динамический куб верёвка просто потащит за собой — ограничивать движение не нужно.
-    if (!this.target || this.target.getMotionType() !== PhysicsMotionType.STATIC) {
+    const attachment = this.attachment;
+    if (!attachment) {
       return;
     }
 
     this.anchorToRef(this.anchorTo);
-    this.anchorTo.subtractToRef(this.target.transformNode.position, this.outward);
+    this.anchorTo.subtractToRef(attachment, this.outward);
 
     const distance = this.outward.length();
     if (distance < GameConfig.rope.length || distance === 0) {

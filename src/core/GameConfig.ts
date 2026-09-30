@@ -94,6 +94,13 @@ export interface TrajectoryConfig {
   readonly color: Color3;
 }
 
+export interface GrappleConfig {
+  /** Скорость полёта к месту крепления, м/с. */
+  readonly speed: number;
+  /** На каком расстоянии от крепления полёт заканчивается, м. */
+  readonly arriveDistance: number;
+}
+
 export interface RopeConfig {
   /** Частиц верёвки, включая якорь на руке; прокси куба добавляется сверху. */
   readonly particleCount: number;
@@ -149,6 +156,7 @@ export interface SceneConfig {
   readonly throwable: ThrowableConfig;
   readonly trajectory: TrajectoryConfig;
   readonly rope: RopeConfig;
+  readonly grapple: GrappleConfig;
 }
 
 /** Единственный источник констант сцены: в коде «магических» чисел быть не должно. */
@@ -203,7 +211,7 @@ export const GameConfig: SceneConfig = {
     cooldown: 0.2,
     spawnForward: 1.1,
     spawnHeight: 0.5,
-    impactImpulseThreshold: 2,
+    impactImpulseThreshold: 1,
     freezeOnGroups: CollisionGroup.Wall,
     body: { mass: 1, friction: 0.6, restitution: 0.2 },
   },
@@ -212,6 +220,10 @@ export const GameConfig: SceneConfig = {
     dotRadius: 0.06,
     timeStep: 0.04,
     color: new Color3(1, 0.9, 0.45),
+  },
+  grapple: {
+    speed: 18,
+    arriveDistance: 1.5,
   },
   rope: {
     particleCount: 48,

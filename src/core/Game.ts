@@ -5,6 +5,7 @@ import { Scene } from "@babylonjs/core/scene";
 import { RopeRenderer } from "../effects/RopeRenderer";
 import { TrajectoryPreview } from "../effects/TrajectoryPreview";
 import { CubePool } from "../entities/CubePool";
+import { Grapple } from "../entities/Grapple";
 import { Player } from "../entities/Player";
 import { Rope } from "../entities/Rope";
 import { TargetWall } from "../entities/TargetWall";
@@ -39,6 +40,7 @@ export class Game {
   private readonly ropeView: RopeRenderer;
   private readonly keyboard: KeyboardState;
   private readonly movement: PlayerController;
+  private readonly grapple: Grapple;
   private readonly aim: ThrowAim;
   private readonly throwing: ThrowController;
   private readonly trajectory: TrajectoryPreview;
@@ -79,6 +81,7 @@ export class Game {
     const camera = this.view.camera;
     this.keyboard = new KeyboardState();
     this.movement = new PlayerController(camera, this.player, this.keyboard, this.rope);
+    this.grapple = new Grapple(this.player, this.rope);
     this.aim = new ThrowAim(camera, this.player);
     this.throwing = new ThrowController(this.keyboard, this.aim, this.cubes, this.rope);
     this.trajectory = new TrajectoryPreview(this.scene, physics, this.aim);
@@ -106,7 +109,10 @@ export class Game {
   /** Один кадр игровой логики: порядок вызовов систем задан здесь явно. */
   private tick(deltaSeconds: number): void {
     this.view.update();
-    this.movement.update();
+    // Пока верёвка тянет персонажа, ввод в движении не участвует: иначе двое правят одну скорость.
+    if (!this.grapple.update()) {
+      this.movement.update();
+    }
     this.aim.update();
     this.throwing.update(deltaSeconds);
     this.trajectory.update();
