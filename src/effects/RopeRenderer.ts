@@ -34,7 +34,8 @@ export class RopeRenderer {
   private readonly after = new Vector3();
 
   public constructor(scene: Scene, rope: Rope) {
-    const { thickness, color, specular, length, smoothing, tessellation } = GameConfig.rope;
+    const { thickness, color, specular, specularPower, length, smoothing, tessellation } =
+      GameConfig.rope;
 
     this.rope = rope;
     this.rings = (rope.pointCount - 1) * smoothing + 1;
@@ -59,7 +60,7 @@ export class RopeRenderer {
     this.material = new StandardMaterial("rope-material", scene);
     this.material.diffuseColor = color;
     this.material.specularColor = specular;
-    this.material.specularPower = 48;
+    this.material.specularPower = specularPower;
     this.mesh.material = this.material;
     // Шейдер компилируется заранее: иначе первый показ верёвки стоит просадки кадра.
     this.material.forceCompilation(this.mesh);

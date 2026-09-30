@@ -123,8 +123,10 @@ export interface RopeConfig {
   /** Точка крепления на персонаже относительно его центра. */
   readonly anchorOffset: Vector3;
   readonly color: Color3;
-  /** Блик: у стального троса он есть, у пеньковой верёвки нет. */
+  /** Блик. У витой верёвки он слабый и широкий: волокно почти не зеркалит. */
   readonly specular: Color3;
+  /** Резкость блика: чем меньше, тем более рассеянный и матовый материал. */
+  readonly specularPower: number;
 }
 
 export interface SceneConfig {
@@ -211,7 +213,7 @@ export const GameConfig: SceneConfig = {
     substeps: 10,
     radius: 0.05,
     selfDistance: 0.05,
-    thickness: 0.035,
+    thickness: 0.05,
     smoothing: 3,
     tessellation: 10,
     particleMass: 0.02,
@@ -222,7 +224,8 @@ export const GameConfig: SceneConfig = {
     damping: 3.5,
     friction: 0.4,
     anchorOffset: new Vector3(0, 0.15, 0),
-    color: new Color3(0.42, 0.45, 0.5),
-    specular: new Color3(0.8, 0.83, 0.88),
+    color: new Color3(0.72, 0.61, 0.43),
+    specular: new Color3(0.12, 0.11, 0.09),
+    specularPower: 8,
   },
 };
