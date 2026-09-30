@@ -123,6 +123,8 @@ export interface RopeConfig {
   /** Точка крепления на персонаже относительно его центра. */
   readonly anchorOffset: Vector3;
   readonly color: Color3;
+  /** Блик: у стального троса он есть, у пеньковой верёвки нет. */
+  readonly specular: Color3;
 }
 
 export interface SceneConfig {
@@ -209,15 +211,18 @@ export const GameConfig: SceneConfig = {
     substeps: 10,
     radius: 0.05,
     selfDistance: 0.05,
-    thickness: 0.05,
+    thickness: 0.035,
     smoothing: 3,
     tessellation: 10,
     particleMass: 0.02,
     stretchCompliance: 0,
-    bendCompliance: 0.01,
-    damping: 2,
-    friction: 0.6,
+    // Трос гнётся втрое неохотнее верёвки. Меньше делать нельзя: изгиб начинает
+    // спорить с растяжением, и трос перетягивается (при 0.0002 — до 9.6 м вместо 7.5).
+    bendCompliance: 0.003,
+    damping: 3.5,
+    friction: 0.4,
     anchorOffset: new Vector3(0, 0.15, 0),
-    color: new Color3(0.86, 0.76, 0.56),
+    color: new Color3(0.42, 0.45, 0.5),
+    specular: new Color3(0.8, 0.83, 0.88),
   },
 };
