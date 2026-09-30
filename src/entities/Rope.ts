@@ -9,6 +9,9 @@ import { RopeSolver } from "../physics/rope/RopeSolver";
 import { SelfCollision } from "../physics/rope/SelfCollision";
 import type { Player } from "./Player";
 
+/** Первая точка верёвки — рука персонажа. */
+const ANCHOR = 0;
+
 /**
  * Верёвка на собственном XPBD-решателе; Havok остаётся для куба, персонажа и окружения.
  * Частица 0 — рука персонажа, последняя — прокси брошенного куба:
@@ -31,6 +34,8 @@ export class Rope {
   private readonly outward = new Vector3();
   /** Квадрат скорости, ниже которой движение считается покоем: 0.1 м/с — 1.6 мм за кадр. */
   private static readonly REST_SPEED_SQUARED = 0.01;
+  /** Квадрат допустимого отрыва начала верёвки от руки: 1 мм. */
+  private static readonly ANCHOR_DRIFT_SQUARED = 1e-6;
 
   public constructor(player: Player, colliders: readonly RopeCollider[]) {
     this.player = player;
@@ -44,7 +49,7 @@ export class Rope {
 
     const inverseMass = this.particles.inverseMass;
     inverseMass.fill(1 / GameConfig.rope.particleMass);
-    inverseMass[0] = 0;
+    inverseMass[ANCHOR] = 0;
     inverseMass[this.proxy] = 1 / GameConfig.throwable.body.mass;
   }
 
@@ -136,13 +141,22 @@ export class Rope {
     this.stateRevision++;
   }
 
+  /**
+   * Верёвка спит, только когда стоят и она сама, и куб, и рука.
+   *
+   * Про руку спрашиваем не «сдвинулась ли за кадр», а «далеко ли она от начала верёвки»:
+   * спящая верёвка свою первую точку не обновляет, поэтому медленный шаг остался бы
+   * ниже покадрового порога, а разрыв копился бы кадр за кадром — верёвка отрывалась от руки.
+   */
   private isAtRest(): boolean {
     const rest = Rope.REST_SPEED_SQUARED;
+
+    this.particles.readToRef(this.particles.position, ANCHOR, this.point);
 
     return (
       this.solver.motion < rest &&
       this.targetVelocity.lengthSquared() < rest &&
-      Vector3.DistanceSquared(this.anchorFrom, this.anchorTo) < rest
+      Vector3.DistanceSquared(this.anchorTo, this.point) < Rope.ANCHOR_DRIFT_SQUARED
     );
   }
 
