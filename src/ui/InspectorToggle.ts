@@ -15,6 +15,7 @@ import type { KeyboardState } from "../input/KeyboardState";
 export class InspectorToggle {
   private readonly scene: Scene;
   private readonly keyboard: KeyboardState;
+  private loaded = false;
   private loading = false;
 
   public constructor(scene: Scene, keyboard: KeyboardState) {
@@ -27,6 +28,11 @@ export class InspectorToggle {
       return;
     }
 
+    if (!this.loaded) {
+      this.loadAndShow();
+      return;
+    }
+
     if (this.scene.debugLayer.isVisible()) {
       this.scene.debugLayer.hide();
       return;
@@ -35,15 +41,23 @@ export class InspectorToggle {
     this.show();
   }
 
-  private show(): void {
+  private loadAndShow(): void {
     if (this.loading) {
       return;
     }
     this.loading = true;
 
-    void import("@babylonjs/inspector").then(() => {
-      this.loading = false;
-      void this.scene.debugLayer.show({ embedMode: true });
-    });
+    void import("@babylonjs/inspector")
+      .then(() => {
+        this.loaded = true;
+        this.show();
+      })
+      .finally(() => {
+        this.loading = false;
+      });
+  }
+
+  private show(): void {
+    void this.scene.debugLayer.show({ embedMode: true });
   }
 }
