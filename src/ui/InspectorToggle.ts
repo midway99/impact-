@@ -1,3 +1,8 @@
+// Side-effect импорт, намеренно не в BabylonSideEffects: он нужен только инспектору.
+// Панель свойств зовёт scene.getAllAnimatablesByTarget, а этот метод прототипу сцены
+// добавляет модуль анимаций. Держим его здесь, чтобы он уехал в dev-чанк вместе с инспектором
+// и не попал в production-сборку, где анимаций нет.
+import "@babylonjs/core/Animations/animatable";
 import type { InspectorToken } from "@babylonjs/inspector";
 import type { Scene } from "@babylonjs/core/scene";
 
