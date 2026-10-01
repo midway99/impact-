@@ -3,6 +3,7 @@
 // добавляет модуль анимаций. Держим его здесь, чтобы он уехал в dev-чанк вместе с инспектором
 // и не попал в production-сборку, где анимаций нет.
 import "@babylonjs/core/Animations/animatable";
+import "@babylonjs/core/Engines/Extensions/engine.query";
 import type { InspectorToken } from "@babylonjs/inspector";
 import type { Scene } from "@babylonjs/core/scene";
 
