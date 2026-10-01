@@ -45,7 +45,7 @@ export class Game {
   private readonly throwing: ThrowController;
   private readonly trajectory: TrajectoryPreview;
   /** Инструмент разработки: подключается динамически и только в dev-режиме. */
-  private inspector?: { update(): void };
+  private inspector?: { update(): void; dispose(): void };
 
   /** Колбэки создаются один раз: в кадре не должно появляться новых замыканий. */
   private readonly renderFrame = (): void => this.scene.render();
@@ -146,6 +146,7 @@ export class Game {
     this.scene.onAfterPhysicsObservable.removeCallback(this.afterPhysics);
     this.engine.stopRenderLoop(this.renderFrame);
     this.keyboard.dispose();
+    this.inspector?.dispose();
     this.freezer.dispose();
     this.trajectory.dispose();
     this.view.dispose();

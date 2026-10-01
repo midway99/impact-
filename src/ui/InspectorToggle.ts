@@ -1,21 +1,17 @@
-// Side-effect импорт: без него у сцены нет свойства debugLayer.
-import "@babylonjs/core/Debug/debugLayer";
+import type { InspectorToken } from "@babylonjs/inspector";
 import type { Scene } from "@babylonjs/core/scene";
 
 import { KeyBinding } from "../input/KeyBinding";
 import type { KeyboardState } from "../input/KeyboardState";
 
-/**
- * Инспектор Babylon по клавише, только в режиме разработки.
- *
- * Он тянет за собой React и Fluent UI (несколько мегабайт) и перерисовывает свой интерфейс
- * каждый кадр, поэтому постоянно включённым держать его нельзя: это съедает кадр.
- * Динамический импорт оставляет его вне production-сборки.
- */
+type ShowInspector = (scene: Scene) => InspectorToken;
+
+/** Загружает Inspector v2 по требованию и переключает его клавишей Backquote. */
 export class InspectorToggle {
   private readonly scene: Scene;
   private readonly keyboard: KeyboardState;
-  private loaded = false;
+  private showInspector?: ShowInspector;
+  private inspector: InspectorToken | undefined;
   private loading = false;
 
   public constructor(scene: Scene, keyboard: KeyboardState) {
@@ -28,17 +24,23 @@ export class InspectorToggle {
       return;
     }
 
-    if (!this.loaded) {
-      this.loadAndShow();
+    if (this.inspector && !this.inspector.isDisposed) {
+      this.inspector.dispose();
+      this.inspector = undefined;
       return;
     }
 
-    if (this.scene.debugLayer.isVisible()) {
-      this.scene.debugLayer.hide();
+    if (this.showInspector) {
+      this.show();
       return;
     }
 
-    this.show();
+    this.loadAndShow();
+  }
+
+  public dispose(): void {
+    this.inspector?.dispose();
+    this.inspector = undefined;
   }
 
   private loadAndShow(): void {
@@ -48,8 +50,8 @@ export class InspectorToggle {
     this.loading = true;
 
     void import("@babylonjs/inspector")
-      .then(() => {
-        this.loaded = true;
+      .then(({ ShowInspector }) => {
+        this.showInspector = ShowInspector;
         this.show();
       })
       .finally(() => {
@@ -58,6 +60,8 @@ export class InspectorToggle {
   }
 
   private show(): void {
-    void this.scene.debugLayer.show({ embedMode: true });
+    if (this.showInspector) {
+      this.inspector = this.showInspector(this.scene);
+    }
   }
 }
