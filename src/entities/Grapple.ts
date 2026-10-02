@@ -50,6 +50,7 @@ export class Grapple {
 
     attachment.subtractToRef(this.player.position, this.direction);
     const distance = this.direction.length();
+    
     if (distance <= GameConfig.grapple.arriveDistance) {
       this.state = GrappleState.Arrived;
 

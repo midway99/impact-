@@ -206,7 +206,7 @@ export const GameConfig: SceneConfig = {
     size: 0.5,
     color: new Color3(0.95, 0.78, 0.3),
     poolSize: 12,
-    speed: 16,
+    speed: 40,
     lift: 3,
     cooldown: 0.2,
     spawnForward: 1.1,
@@ -227,7 +227,7 @@ export const GameConfig: SceneConfig = {
   },
   rope: {
     particleCount: 48,
-    length: 7.5,
+    length: 9.5,
     substeps: 10,
     radius: 0.05,
     selfDistance: 0.05,

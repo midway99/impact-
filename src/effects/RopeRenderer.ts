@@ -1,15 +1,19 @@
+import { VertexBuffer } from "@babylonjs/core/Buffers/buffer";
 import { StandardMaterial } from "@babylonjs/core/Materials/standardMaterial";
 import type { DynamicTexture } from "@babylonjs/core/Materials/Textures/dynamicTexture";
 import { Vector3 } from "@babylonjs/core/Maths/math.vector";
-import { CreateTube } from "@babylonjs/core/Meshes/Builders/tubeBuilder";
-import type { Mesh } from "@babylonjs/core/Meshes/mesh";
+import { Mesh } from "@babylonjs/core/Meshes/mesh";
+import { VertexData } from "@babylonjs/core/Meshes/mesh.vertexData";
 import type { Scene } from "@babylonjs/core/scene";
 
 import { GameConfig } from "../core/GameConfig";
 import type { Rope } from "../entities/Rope";
 import { RopeTexture } from "./RopeTexture";
 
-const MESH_NAME = "rope";
+const AXIS = 3;
+const UV_STRIDE = 2;
+/** Индексов на одну ячейку сетки трубки: два треугольника. */
+const INDICES_PER_CELL = 6;
 /** Уровень анизотропной фильтрации витья: узор идёт вдоль сильно вытянутой поверхности. */
 const ANISOTROPY = 16;
 /** Доля выраженности прядей, уходящая в выпуклость трубки; остальное — в рельеф теней. */
@@ -18,97 +22,117 @@ const BULGE_SHARE = 0.7;
 const MIN_RINGS_PER_BULGE = 4;
 
 /**
- * Верёвка рисуется штатной трубкой Babylon вдоль пути частиц.
+ * Верёвка собирается вершинами: кольца вдоль пути, между кольцами — полосы треугольников.
  *
- * `CreateTube` с параметром `instance` обновляет уже созданный меш, не пересобирая его с нуля;
- * число точек пути при этом менять нельзя, поэтому массив пути выделен один раз и переиспользуется.
+ * Топология постоянна, поэтому индексы и развёртка считаются один раз при старте, а в кадре
+ * переписываются только координаты и нормали в уже выделенных массивах — ни аллокаций,
+ * ни пересборки геометрии.
  *
  * Путь сглаживается сплайном Катмулла — Рома: по самим частицам трубка была бы ломаной.
  */
 export class RopeRenderer {
   private readonly rope: Rope;
+  private readonly mesh: Mesh;
   private readonly material: StandardMaterial;
   private readonly texture: DynamicTexture;
   private readonly relief: DynamicTexture;
+
+  private readonly rings: number;
+  private readonly sides: number;
   private readonly radius: number;
   private readonly bulge: number;
   private readonly pitch: number;
 
-  /**
-   * Радиус трубки вдоль пути: витки — это не только текстура, но и настоящая выпуклость.
-   * Только текстурой не обойтись: на тонкой трубке мип-фильтрация замыливает мелкий узор,
-   * а выпуклость видно при любой фильтрации и на любом расстоянии.
-   *
-   * Функция создаётся один раз и передаётся в CreateTube каждый кадр: замыканий в кадре не появляется.
-   */
-  private readonly strandRadius = (_index: number, distance: number): number =>
-    this.radius * (1 + this.bulge * Math.sin((distance / this.pitch) * Math.PI * 2));
-  private mesh: Mesh;
-
-  private readonly rings: number;
-  /** Сглаженный путь: те же объекты каждый кадр, CreateTube читает их на месте. */
-  private readonly path: Vector3[];
+  private readonly positions: Float32Array;
+  private readonly normals: Float32Array;
+  /** Сглаженный путь: те же объекты каждый кадр. */
+  private readonly path: readonly Vector3[];
+  /** Смещения вершин сечения — считаются один раз. */
+  private readonly cosines: Float32Array;
+  private readonly sines: Float32Array;
   private renderedRevision = -1;
 
-  // Scratch-поля: опорные точки сплайна.
+  // Scratch-поля: опорные точки сплайна и система координат вдоль кривой.
   private readonly before = new Vector3();
   private readonly start = new Vector3();
   private readonly end = new Vector3();
   private readonly after = new Vector3();
+  private readonly tangent = new Vector3();
+  private readonly normal = new Vector3();
+  private readonly binormal = new Vector3();
+  private readonly radial = new Vector3();
 
   public constructor(scene: Scene, rope: Rope) {
-    const { thickness, color, specular, specularPower, length, smoothing, tessellation } =
-      GameConfig.rope;
-
-    const { strands, twists, strandRelief } = GameConfig.rope;
+    const { thickness, length, smoothing, tessellation, twists, strandRelief } = GameConfig.rope;
 
     this.rope = rope;
     this.rings = (rope.pointCount - 1) * smoothing + 1;
+    this.sides = tessellation;
     this.radius = thickness / 2;
     this.bulge = strandRelief * BULGE_SHARE;
-    // Выпуклость — геометрия, и её период не может быть короче четырёх колец: иначе синус
-    // попадает в алиасинг и вместо витков выходят случайные биения. Текстуру это не ограничивает,
-    // у неё витков столько, сколько задано.
-    const ringPitch = (length / (this.rings - 1)) * MIN_RINGS_PER_BULGE;
-    this.pitch = Math.max(length / twists, ringPitch);
+    // Период выпуклости не короче четырёх колец: иначе синус попадает в алиасинг
+    // и вместо витков выходят случайные биения. Текстуру это не ограничивает.
+    this.pitch = Math.max(length / twists, (length / (this.rings - 1)) * MIN_RINGS_PER_BULGE);
 
-    // Стартовый путь — прямой отрезок: вырожденный путь Babylon построить не сможет.
-    this.path = new Array<Vector3>(this.rings);
-    const step = length / (this.rings - 1);
-    for (let i = 0; i < this.rings; i++) {
-      this.path[i] = new Vector3(i * step, 0, 0);
+    this.path = RopeRenderer.createPath(this.rings, length);
+    this.cosines = new Float32Array(this.sides);
+    this.sines = new Float32Array(this.sides);
+    for (let side = 0; side < this.sides; side++) {
+      const angle = (side / this.sides) * Math.PI * 2;
+      this.cosines[side] = Math.cos(angle);
+      this.sines[side] = Math.sin(angle);
     }
 
-    this.mesh = CreateTube(
-      MESH_NAME,
-      { path: this.path, radiusFunction: this.strandRadius, tessellation, updatable: true },
-      scene,
-    );
+    const vertices = this.rings * this.sides;
+    this.positions = new Float32Array(vertices * AXIS);
+    this.normals = new Float32Array(vertices * AXIS);
+
+    this.mesh = new Mesh("rope", scene);
+    this.buildGeometry();
     this.mesh.isPickable = false;
     this.mesh.isVisible = false;
     // Габариты пересчитываются не каждый кадр — без этого трубку отсекает frustum culling.
     this.mesh.alwaysSelectAsActiveMesh = true;
 
-    this.material = new StandardMaterial("rope-material", scene);
-    this.texture = RopeTexture.createDiffuse(scene, color, strands);
-    this.relief = RopeTexture.createNormal(scene, strands, strandRelief);
-    // У трубки Babylon вдоль пути идёт U, поперёк — V: витьё повторяем по U,
-    // а по кругу ровно один раз, иначе узор разойдётся на шве.
-    this.texture.uScale = twists;
-    this.relief.uScale = twists;
-    // Трубка тонкая: по кругу текстура укладывается в считаные пиксели, и обычная
-    // мип-фильтрация замыливает заодно узор вдоль верёвки. Анизотропия её удерживает.
-    this.texture.anisotropicFilteringLevel = ANISOTROPY;
-    this.relief.anisotropicFilteringLevel = ANISOTROPY;
-    this.material.diffuseTexture = this.texture;
-    this.material.bumpTexture = this.relief;
-    this.material.specularColor = specular;
-    this.material.specularPower = specularPower;
+    this.texture = RopeTexture.createDiffuse(scene, GameConfig.rope.color, GameConfig.rope.strands);
+    this.relief = RopeTexture.createNormal(scene, GameConfig.rope.strands, strandRelief);
+    this.material = this.createMaterial(scene, twists);
     this.mesh.material = this.material;
+  }
+
+  /** Стартовый путь — прямой отрезок: по вырожденному нельзя построить систему координат. */
+  private static createPath(rings: number, length: number): readonly Vector3[] {
+    const path = new Array<Vector3>(rings);
+    const step = length / (rings - 1);
+
+    for (let i = 0; i < rings; i++) {
+      path[i] = new Vector3(i * step, 0, 0);
+    }
+
+    return path;
+  }
+
+  private createMaterial(scene: Scene, twists: number): StandardMaterial {
+    const { specular, specularPower } = GameConfig.rope;
+    const material = new StandardMaterial("rope-material", scene);
+
+    for (const map of [this.texture, this.relief]) {
+      // Витьё повторяется вдоль верёвки; поперёк — ровно один раз, иначе узор разойдётся на шве.
+      map.uScale = twists;
+      // Трубка тонкая: по кругу текстура укладывается в считаные пиксели, и обычная
+      // мип-фильтрация замыливает заодно узор вдоль верёвки. Анизотропия её удерживает.
+      map.anisotropicFilteringLevel = ANISOTROPY;
+    }
+
+    material.diffuseTexture = this.texture;
+    material.bumpTexture = this.relief;
+    material.specularColor = specular;
+    material.specularPower = specularPower;
     // Шейдер компилируется заранее: иначе первый показ верёвки стоит просадки кадра.
-    this.material.forceCompilation(this.mesh);
-    // Материал верёвки после настройки не меняется: снимаем с него проверки грязных флагов.
-    this.material.freeze();
+    material.forceCompilation(this.mesh);
+    material.freeze();
+
+    return material;
   }
 
   public update(): void {
@@ -121,15 +145,54 @@ export class RopeRenderer {
     }
 
     this.buildPath();
-    // CreateTube внутри выделяет массив и Vector3 на каждое кольцо (tubeBuilder, tubePathArray),
-    // поэтому вызываем его только когда верёвка действительно сдвинулась: спящая не стоит ничего.
-    this.mesh = CreateTube(MESH_NAME, {
-      path: this.path,
-      radiusFunction: this.strandRadius,
-      instance: this.mesh,
-    });
+    this.writeRings();
+
+    this.mesh.updateVerticesData(VertexBuffer.PositionKind, this.positions, false, false);
+    this.mesh.updateVerticesData(VertexBuffer.NormalKind, this.normals, false, false);
     this.mesh.isVisible = true;
     this.renderedRevision = this.rope.revision;
+  }
+
+  /**
+   * Постоянная часть геометрии: треугольники между соседними кольцами и развёртка.
+   * От движения верёвки не зависит ни то ни другое, поэтому считается один раз.
+   */
+  private buildGeometry(): void {
+    const indices = new Array<number>((this.rings - 1) * this.sides * INDICES_PER_CELL);
+    const uvs = new Float32Array(this.rings * this.sides * UV_STRIDE);
+    let at = 0;
+
+    for (let ring = 0; ring < this.rings; ring++) {
+      for (let side = 0; side < this.sides; side++) {
+        const uv = (ring * this.sides + side) * UV_STRIDE;
+        uvs[uv] = ring / (this.rings - 1);
+        uvs[uv + 1] = side / this.sides;
+
+        if (ring === this.rings - 1) {
+          continue;
+        }
+
+        const next = (side + 1) % this.sides;
+        const a = ring * this.sides + side;
+        const b = ring * this.sides + next;
+        const c = (ring + 1) * this.sides + side;
+        const d = (ring + 1) * this.sides + next;
+
+        indices[at++] = a;
+        indices[at++] = c;
+        indices[at++] = b;
+        indices[at++] = b;
+        indices[at++] = c;
+        indices[at++] = d;
+      }
+    }
+
+    const data = new VertexData();
+    data.positions = this.positions;
+    data.normals = this.normals;
+    data.uvs = uvs;
+    data.indices = indices;
+    data.applyToMesh(this.mesh, true);
   }
 
   /** Сплайн по частицам решателя: кривая проходит через них, но без изломов. */
@@ -165,6 +228,81 @@ export class RopeRenderer {
       (this.before.y * wBefore + this.start.y * wStart + this.end.y * wEnd + this.after.y * wAfter) / 2,
       (this.before.z * wBefore + this.start.z * wStart + this.end.z * wEnd + this.after.z * wAfter) / 2,
     );
+  }
+
+  /** Радиус кольца: витки — не только текстура, но и настоящая выпуклость вдоль дуги. */
+  private ringRadius(distance: number): number {
+    return this.radius * (1 + this.bulge * Math.sin((distance / this.pitch) * Math.PI * 2));
+  }
+
+  private writeRings(): void {
+    let distance = 0;
+
+    for (let ring = 0; ring < this.rings; ring++) {
+      if (ring > 0) {
+        distance += Vector3.Distance(this.path[ring - 1]!, this.path[ring]!);
+      }
+
+      this.updateFrame(ring);
+      this.writeRing(ring, this.ringRadius(distance));
+    }
+  }
+
+  /**
+   * Система координат кольца. Нормаль переносится с предыдущего кольца и лишь
+   * распрямляется поперёк нового направления — иначе трубку перекручивает на изгибах.
+   */
+  private updateFrame(ring: number): void {
+    const current = this.path[ring]!;
+    const neighbour = ring < this.rings - 1 ? this.path[ring + 1]! : this.path[ring - 1]!;
+
+    neighbour.subtractToRef(current, this.tangent);
+    if (ring === this.rings - 1) {
+      this.tangent.scaleInPlace(-1);
+    }
+    if (this.tangent.lengthSquared() < 1e-12) {
+      this.tangent.set(0, 0, 1);
+    }
+    this.tangent.normalize();
+
+    if (ring === 0) {
+      // Первое кольцо: любая ось, не совпадающая с направлением.
+      const upright = Math.abs(this.tangent.y) < 0.9;
+      this.normal.set(upright ? 0 : 1, upright ? 1 : 0, 0);
+    }
+
+    this.tangent.scaleAndAddToRef(-Vector3.Dot(this.normal, this.tangent), this.normal);
+    if (this.normal.lengthSquared() < 1e-12) {
+      this.normal.set(this.tangent.y, -this.tangent.x, 0);
+    }
+    this.normal.normalize();
+    Vector3.CrossToRef(this.tangent, this.normal, this.binormal);
+  }
+
+  private writeRing(ring: number, radius: number): void {
+    const centre = this.path[ring]!;
+    const base = ring * this.sides * AXIS;
+
+    for (let side = 0; side < this.sides; side++) {
+      const cos = this.cosines[side]!;
+      const sin = this.sines[side]!;
+      const at = base + side * AXIS;
+
+      this.radial.set(
+        this.normal.x * cos + this.binormal.x * sin,
+        this.normal.y * cos + this.binormal.y * sin,
+        this.normal.z * cos + this.binormal.z * sin,
+      );
+
+      this.positions[at] = centre.x + this.radial.x * radius;
+      this.positions[at + 1] = centre.y + this.radial.y * radius;
+      this.positions[at + 2] = centre.z + this.radial.z * radius;
+
+      // Радиальный вектор единичный по построению: нормаль смотрит наружу от оси трубки.
+      this.normals[at] = this.radial.x;
+      this.normals[at + 1] = this.radial.y;
+      this.normals[at + 2] = this.radial.z;
+    }
   }
 
   public dispose(): void {
