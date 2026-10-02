@@ -29,6 +29,11 @@ export class CubePool {
     this.material.diffuseColor = color;
     this.source.material = this.material;
 
+    // Кубы появляются только после броска, и их шейдер собрался бы прямо в этот момент —
+    // рывком кадра на ровном месте. Собираем заранее, как и у верёвки.
+    this.material.forceCompilation(this.source);
+    this.material.freeze();
+
     const cubes = new Array<ThrowableCube>(poolSize);
     for (let i = 0; i < poolSize; i++) {
       cubes[i] = new ThrowableCube(this.source, i, physics, scene);
