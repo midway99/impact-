@@ -232,8 +232,8 @@ export const GameConfig: SceneConfig = {
     radius: 0.05,
     selfDistance: 0.05,
     thickness: 0.05,
-    smoothing: 3,
-    tessellation: 10,
+    smoothing: 2,
+    tessellation: 8,
     particleMass: 0.02,
     stretchCompliance: 0,
     // Трос гнётся втрое неохотнее верёвки. Меньше делать нельзя: изгиб начинает

@@ -14,6 +14,8 @@ const MESH_NAME = "rope";
 const ANISOTROPY = 16;
 /** Доля выраженности прядей, уходящая в выпуклость трубки; остальное — в рельеф теней. */
 const BULGE_SHARE = 0.7;
+/** Колец на период выпуклости: меньше четырёх — и волна вырождается в биения. */
+const MIN_RINGS_PER_BULGE = 4;
 
 /**
  * Верёвка рисуется штатной трубкой Babylon вдоль пути частиц.
@@ -64,7 +66,11 @@ export class RopeRenderer {
     this.rings = (rope.pointCount - 1) * smoothing + 1;
     this.radius = thickness / 2;
     this.bulge = strandRelief * BULGE_SHARE;
-    this.pitch = length / twists;
+    // Выпуклость — геометрия, и её период не может быть короче четырёх колец: иначе синус
+    // попадает в алиасинг и вместо витков выходят случайные биения. Текстуру это не ограничивает,
+    // у неё витков столько, сколько задано.
+    const ringPitch = (length / (this.rings - 1)) * MIN_RINGS_PER_BULGE;
+    this.pitch = Math.max(length / twists, ringPitch);
 
     // Стартовый путь — прямой отрезок: вырожденный путь Babylon построить не сможет.
     this.path = new Array<Vector3>(this.rings);
@@ -101,6 +107,8 @@ export class RopeRenderer {
     this.mesh.material = this.material;
     // Шейдер компилируется заранее: иначе первый показ верёвки стоит просадки кадра.
     this.material.forceCompilation(this.mesh);
+    // Материал верёвки после настройки не меняется: снимаем с него проверки грязных флагов.
+    this.material.freeze();
   }
 
   public update(): void {
