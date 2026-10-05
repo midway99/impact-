@@ -9,7 +9,6 @@ import type { Scene } from "@babylonjs/core/scene";
 import { GameConfig } from "../core/GameConfig";
 import type { Rope } from "../entities/Rope";
 import { RopeFrames } from "./RopeFrames";
-import { RopeModel } from "./RopeModel";
 import type { RopeShape } from "./RopeShape";
 import { RopeTexture } from "./RopeTexture";
 
@@ -65,7 +64,8 @@ export class RopeRenderer {
   private readonly normal = new Vector3();
   private readonly binormal = new Vector3();
 
-  public constructor(scene: Scene, rope: Rope) {
+  /** Форма приходит готовой: её загрузка асинхронная, а буферы нужны уже в конструкторе. */
+  public constructor(scene: Scene, rope: Rope, shape: RopeShape) {
     const { length, smoothing, twists, strandRelief } = GameConfig.rope;
 
     this.rope = rope;
@@ -78,7 +78,7 @@ export class RopeRenderer {
     this.path = RopeRenderer.createPath(this.points, length);
     this.distances = new Float32Array(this.points);
     this.frames = new RopeFrames(this.points);
-    this.shape = RopeModel.load(scene, this.points);
+    this.shape = shape;
 
     this.positions = new Float32Array(this.shape.vertexCount * AXIS);
     this.normals = new Float32Array(this.shape.vertexCount * AXIS);

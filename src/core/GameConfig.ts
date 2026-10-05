@@ -118,6 +118,11 @@ export interface RopeConfig {
   readonly smoothing: number;
   /** Граней в сечении трубки. */
   readonly tessellation: number;
+  /**
+   * Колец у заготовки модели, которая строится кодом, пока нет настоящей.
+   * Меш от моделлера задаёт свою нарезку сам, и это число тогда не используется.
+   */
+  readonly modelSections: number;
   readonly particleMass: number;
   /** Податливость растяжения, м/Н: 0 — нерастяжимая. */
   readonly stretchCompliance: number;
@@ -227,13 +232,14 @@ export const GameConfig: SceneConfig = {
   },
   rope: {
     particleCount: 48,
-    length: 9.5,
+    length: 15.5,
     substeps: 10,
     radius: 0.05,
     selfDistance: 0.05,
     thickness: 0.05,
     smoothing: 2,
     tessellation: 8,
+    modelSections: 97,
     particleMass: 0.02,
     stretchCompliance: 0,
     // Трос гнётся втрое неохотнее верёвки. Меньше делать нельзя: изгиб начинает

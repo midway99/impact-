@@ -11,7 +11,7 @@ if (!(canvas instanceof HTMLCanvasElement)) {
 }
 
 const physics = await HavokPhysicsLoader.load();
-const game = new Game(canvas, physics);
+const game = await Game.create(canvas, physics);
 
 game.start();
 

@@ -1,8 +1,11 @@
+import type { AbstractEngine } from "@babylonjs/core/Engines/abstractEngine";
 import { Engine } from "@babylonjs/core/Engines/engine";
 import type { HavokPlugin } from "@babylonjs/core/Physics/v2/Plugins/havokPlugin";
 import { Scene } from "@babylonjs/core/scene";
 
+import { RopeModel } from "../effects/RopeModel";
 import { RopeRenderer } from "../effects/RopeRenderer";
+import type { RopeShape } from "../effects/RopeShape";
 import { TrajectoryPreview } from "../effects/TrajectoryPreview";
 import { CubePool } from "../entities/CubePool";
 import { Grapple } from "../entities/Grapple";
@@ -28,7 +31,8 @@ const GROUND_HEIGHT = 0;
 
 /** Владелец движка, сцены и игрового цикла. Логика сущностей живёт в отдельных классах. */
 export class Game {
-  private readonly engine: Engine;
+  /** Движок приходит из сцены: конкретный класс здесь не нужен, только управление циклом. */
+  private readonly engine: AbstractEngine;
   private readonly scene: Scene;
   private readonly arena: Arena;
   private readonly player: Player;
@@ -54,18 +58,45 @@ export class Game {
   /** Верёвка — сразу после шага Havok: куб уже на новом месте, и шаг у них общий. */
   private readonly afterPhysics = (): void => this.stepRope();
 
-  public constructor(canvas: HTMLCanvasElement, physics: HavokPlugin) {
+  /**
+   * Асинхронная, потому что геометрия верёвки приходит из модели, а её надо загрузить.
+   * Движок и сцена создаются здесь же: без сцены модель загрузить некуда.
+   */
+  public static async create(canvas: HTMLCanvasElement, physics: HavokPlugin): Promise<Game> {
+    const scene = Game.createScene(Game.createEngine(canvas), physics);
+
+    return new Game(canvas, scene, physics, await RopeModel.load(scene));
+  }
+
+  private static createEngine(canvas: HTMLCanvasElement): Engine {
     const { antialias, maxPixelRatio } = GameConfig.render;
+    const engine = new Engine(canvas, antialias, { stencil: true }, false);
 
-    this.engine = new Engine(canvas, antialias, { stencil: true }, false);
     // Уровень 1 — один пиксель рендера на CSS-пиксель; меньше единицы = сверхвыборка.
-    this.engine.setHardwareScalingLevel(1 / Math.min(window.devicePixelRatio, maxPixelRatio));
+    engine.setHardwareScalingLevel(1 / Math.min(window.devicePixelRatio, maxPixelRatio));
 
-    this.scene = new Scene(this.engine);
-    this.scene.clearColor = GameConfig.clearColor.toColor4(1);
+    return engine;
+  }
+
+  private static createScene(engine: Engine, physics: HavokPlugin): Scene {
+    const scene = new Scene(engine);
+
+    scene.clearColor = GameConfig.clearColor.toColor4(1);
     // Мы не выбираем объекты указателем: незачем трассировать луч на каждое движение мыши.
-    this.scene.skipPointerMovePicking = true;
-    this.scene.enablePhysics(GameConfig.gravity, physics);
+    scene.skipPointerMovePicking = true;
+    scene.enablePhysics(GameConfig.gravity, physics);
+
+    return scene;
+  }
+
+  private constructor(
+    canvas: HTMLCanvasElement,
+    scene: Scene,
+    physics: HavokPlugin,
+    ropeShape: RopeShape,
+  ) {
+    this.engine = scene.getEngine();
+    this.scene = scene;
 
     this.arena = new Arena(this.scene);
     this.player = new Player(this.scene);
@@ -76,7 +107,7 @@ export class Game {
     this.cubes = new CubePool(this.scene, physics);
     this.freezer = new ImpactFreezer(physics);
     this.rope = new Rope(this.player, this.createRopeColliders());
-    this.ropeView = new RopeRenderer(this.scene, this.rope);
+    this.ropeView = new RopeRenderer(this.scene, this.rope, ropeShape);
 
     const camera = this.view.camera;
     this.keyboard = new KeyboardState();
