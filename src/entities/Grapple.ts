@@ -6,7 +6,7 @@ import type { Player } from "./Player";
 import type { Rope } from "./Rope";
 
 /** Состояние рывка. Отдельный тип, чтобы не заводить пару перекрывающихся флагов. */
-enum GrappleState {
+export enum GrappleState {
   /** Цепляться не за что: броска не было или куб ещё летит. */
   Idle,
   /** Верёвка тянет персонажа к месту удара. */
@@ -33,34 +33,37 @@ export class Grapple {
     this.rope = rope;
   }
 
-  /** Тянет персонажа, если есть за что. `true` — этим кадром управляет верёвка, а не игрок. */
-  public update(): boolean {
+  /**
+   * Тянет персонажа, если есть за что, и отдаёт состояние рывка:
+   * `Pulling` — этим кадром управляет верёвка, а не игрок; `Arrived` — рывок закончен.
+   */
+  public update(): GrappleState {
     const attachment = this.rope.attachment;
 
     // Новый бросок обнуляет рывок сам: летящий куб ещё не крепление.
     if (!attachment) {
       this.state = GrappleState.Idle;
 
-      return false;
+      return this.state;
     }
 
     if (this.state === GrappleState.Arrived) {
-      return false;
+      return this.state;
     }
 
     attachment.subtractToRef(this.player.position, this.direction);
     const distance = this.direction.length();
-    
+
     if (distance <= GameConfig.grapple.arriveDistance) {
       this.state = GrappleState.Arrived;
 
-      return false;
+      return this.state;
     }
 
     this.state = GrappleState.Pulling;
     this.direction.scaleInPlace(GameConfig.grapple.speed / distance);
     this.player.pull(this.direction);
 
-    return true;
+    return this.state;
   }
 }

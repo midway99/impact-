@@ -8,7 +8,7 @@ import { RopeRenderer } from "../effects/RopeRenderer";
 import type { RopeShape } from "../effects/RopeShape";
 import { TrajectoryPreview } from "../effects/TrajectoryPreview";
 import { CubePool } from "../entities/CubePool";
-import { Grapple } from "../entities/Grapple";
+import { Grapple, GrappleState } from "../entities/Grapple";
 import { Player } from "../entities/Player";
 import { Rope } from "../entities/Rope";
 import { TargetWall } from "../entities/TargetWall";
@@ -140,14 +140,34 @@ export class Game {
   /** Один кадр игровой логики: порядок вызовов систем задан здесь явно. */
   private tick(deltaSeconds: number): void {
     this.view.update();
-    // Пока верёвка тянет персонажа, ввод в движении не участвует: иначе двое правят одну скорость.
-    if (!this.grapple.update()) {
-      this.movement.update();
-    }
+    this.updateMovement();
     this.aim.update();
     this.throwing.update(deltaSeconds);
     this.trajectory.update();
     this.inspector?.update();
+  }
+
+  /** Пока верёвка тянет персонажа, ввод в движении не участвует: иначе двое правят одну скорость. */
+  private updateMovement(): void {
+    const grapple = this.grapple.update();
+
+    if (grapple === GrappleState.Arrived) {
+      this.retireThrow();
+    }
+    if (grapple !== GrappleState.Pulling) {
+      this.movement.update();
+    }
+  }
+
+  /**
+   * Рывок закончен: куб уходит в пул, верёвка отпускает крепление.
+   * Дальше `RopeRenderer` сам перестаёт её рисовать, а решатель — считать.
+   */
+  private retireThrow(): void {
+    this.cubes.parkActive();
+    this.rope.release();
+    // Верёвка рисуется до игровой логики: не обнови её здесь — продержится на экране лишний кадр.
+    this.ropeView.update();
   }
 
   private stepRope(): void {

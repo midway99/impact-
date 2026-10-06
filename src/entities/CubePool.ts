@@ -18,6 +18,8 @@ export class CubePool {
   private readonly material: StandardMaterial;
   private readonly cubes: readonly ThrowableCube[];
   private next = 0;
+  /** Куб последнего броска: только за него держится верёвка, и только его убирают после рывка. */
+  private active: ThrowableCube | null = null;
 
   public constructor(scene: Scene, physics: HavokPlugin) {
     const { size, color, poolSize } = GameConfig.throwable;
@@ -46,8 +48,15 @@ export class CubePool {
     const cube = this.cubes[this.next];
     this.next = (this.next + 1) % this.cubes.length;
     cube?.launch(position, velocity);
+    this.active = cube ?? null;
 
     return cube?.body;
+  }
+
+  /** Убирает куб последнего броска со сцены: рывок закончен, держаться за него больше не нужно. */
+  public parkActive(): void {
+    this.active?.park();
+    this.active = null;
   }
 
   public dispose(): void {
