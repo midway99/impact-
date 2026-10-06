@@ -6,6 +6,7 @@ import { GameConfig } from "../core/GameConfig";
 import { ParticleBuffer } from "../physics/rope/ParticleBuffer";
 import type { RopeCollider } from "../physics/rope/RopeCollider";
 import { RopeSolver } from "../physics/rope/RopeSolver";
+import { RopeTension } from "../physics/rope/RopeTension";
 import { SelfCollision } from "../physics/rope/SelfCollision";
 import type { Player } from "./Player";
 
@@ -25,6 +26,7 @@ export class Rope {
 
   private target: PhysicsBody | null = null;
   private stateRevision = 0;
+  private readonly tension = new RopeTension();
 
   private readonly anchorFrom = new Vector3();
   private readonly anchorTo = new Vector3();
@@ -103,6 +105,7 @@ export class Rope {
     }
 
     this.target = target;
+    this.tension.reset();
     this.stateRevision++;
   }
 
@@ -121,7 +124,7 @@ export class Rope {
     this.anchorTo.subtractToRef(attachment, this.outward);
 
     const distance = this.outward.length();
-    if (distance < GameConfig.rope.length || distance === 0) {
+    if (distance < this.tension.length || distance === 0) {
       return;
     }
 
@@ -149,9 +152,32 @@ export class Rope {
       return;
     }
 
-    this.solver.simulate(stepSeconds, this.anchorFrom, this.anchorTo);
+    const attachment = this.attachment;
+    if (this.tension.update(stepSeconds, this.anchorTo, attachment) && attachment) {
+      this.straighten(attachment);
+    }
+    this.solver.simulate(stepSeconds, this.anchorFrom, this.anchorTo, this.tension.length);
     this.pushTarget(this.target);
     this.stateRevision++;
+  }
+
+  /**
+   * Верёвка выпрямляется в струну между рукой и креплением.
+   *
+   * Одной рабочей длины мало: решателю нужно около трети секунды, чтобы выбрать петлю
+   * в полтора десятка метров, а рывок за это время успевает закончиться — и проходит
+   * на провисе. Скорости гасятся: болтание верёвки натяжением как раз и поглощается.
+   */
+  private straighten(attachment: Vector3): void {
+    const { position, previous, velocity } = this.particles;
+
+    for (let i = 0; i <= this.proxy; i++) {
+      Vector3.LerpToRef(this.anchorTo, attachment, i / this.proxy, this.point);
+      this.particles.write(position, i, this.point);
+      this.particles.write(previous, i, this.point);
+    }
+
+    velocity.fill(0);
   }
 
   /**

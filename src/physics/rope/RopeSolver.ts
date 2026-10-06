@@ -22,7 +22,8 @@ export class RopeSolver {
   private readonly colliders: readonly RopeCollider[];
   private readonly selfCollision: SelfCollision;
   private readonly proxy: number;
-  private readonly segmentLength: number;
+  /** Длина звена при полностью размотанной верёвке: ниже неё укорачивает натяжение. */
+  private readonly fullSegment: number;
   private readonly anchor = new Vector3();
   /** Квадрат самой большой скорости частицы в прошлом шаге — по нему верёвка засыпает. */
   private fastestSpeedSquared = 0;
@@ -36,7 +37,7 @@ export class RopeSolver {
     this.colliders = colliders;
     this.selfCollision = selfCollision;
     this.proxy = particles.count - 1;
-    this.segmentLength = GameConfig.rope.length / this.proxy;
+    this.fullSegment = GameConfig.rope.length / this.proxy;
   }
 
   /** Насколько быстро двигалась верёвка в прошлом шаге: 0 — стоит на месте. */
@@ -44,7 +45,8 @@ export class RopeSolver {
     return this.fastestSpeedSquared;
   }
 
-  public simulate(frameDt: number, anchorFrom: Vector3, anchorTo: Vector3): void {
+  /** `extent` — рабочая длина верёвки, м: натянутая верёвка короче размотанной. */
+  public simulate(frameDt: number, anchorFrom: Vector3, anchorTo: Vector3, extent: number): void {
     const substeps = GameConfig.rope.substeps;
     const dt = frameDt / substeps;
 
@@ -61,7 +63,7 @@ export class RopeSolver {
       this.particles.write(this.particles.position, ANCHOR, this.anchor);
 
       this.integrate(dt);
-      this.solveConstraints(dt);
+      this.solveConstraints(dt, Math.min(extent / this.proxy, this.fullSegment));
       this.solveCollisions();
       this.selfCollision.resolve(this.particles);
       this.updateVelocities(dt);
@@ -119,10 +121,9 @@ export class RopeSolver {
     }
   }
 
-  private solveConstraints(dt: number): void {
+  private solveConstraints(dt: number, length: number): void {
     const { stretchCompliance, bendCompliance } = GameConfig.rope;
     const dt2 = dt * dt;
-    const length = this.segmentLength;
 
     for (let i = 0; i < this.proxy; i++) {
       this.projectDistance(i, i + 1, length, stretchCompliance / dt2, false);
