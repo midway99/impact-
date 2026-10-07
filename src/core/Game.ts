@@ -112,7 +112,7 @@ export class Game {
     const camera = this.view.camera;
     this.keyboard = new KeyboardState();
     this.movement = new PlayerController(camera, this.player, this.keyboard, this.rope);
-    this.grapple = new Grapple(this.player, this.rope);
+    this.grapple = new Grapple(this.player, this.rope, this.freezer);
     this.aim = new ThrowAim(camera, this.player);
     this.throwing = new ThrowController(this.keyboard, this.aim, this.cube, this.rope);
     this.trajectory = new TrajectoryPreview(this.scene, physics, this.aim);
