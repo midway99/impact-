@@ -61,7 +61,10 @@ export class Grapple {
     }
 
     this.state = GrappleState.Pulling;
-    this.direction.scaleInPlace(GameConfig.grapple.speed / distance);
+    // Целимся выше крюка. Добавка постоянная, а расстояние убывает — значит чем ближе
+    // персонаж, тем круче вверх уводит направление: на кромке уступа его выносит наверх.
+    this.direction.y += GameConfig.grapple.rise;
+    this.direction.scaleInPlace(GameConfig.grapple.speed / this.direction.length());
     this.player.pull(this.direction);
 
     return this.state;

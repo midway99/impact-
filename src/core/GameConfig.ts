@@ -97,6 +97,12 @@ export interface GrappleConfig {
   readonly speed: number;
   /** На каком расстоянии от крепления полёт заканчивается, м. */
   readonly arriveDistance: number;
+  /**
+   * Насколько выше крюка целится рывок, м. Вблизи эта добавка берёт верх над
+   * направлением к крюку, и на кромке уступа персонажа выносит наверх, а не в край.
+   * Замерено: при 0.35 верхняя точка полёта примерно на 1.7 м выше крюка, при 0 — на 0.85.
+   */
+  readonly rise: number;
 }
 
 export interface RopeConfig {
@@ -237,6 +243,7 @@ export const GameConfig: SceneConfig = {
   grapple: {
     speed: 18,
     arriveDistance: 1.5,
+    rise: 0.35,
   },
   rope: {
     particleCount: 48,
