@@ -140,7 +140,7 @@ export class Game {
   /** Один кадр игровой логики: порядок вызовов систем задан здесь явно. */
   private tick(deltaSeconds: number): void {
     this.view.update();
-    this.updateMovement();
+    this.updateMovement(deltaSeconds);
     this.aim.update();
     this.throwing.update(deltaSeconds);
     this.trajectory.update();
@@ -148,8 +148,8 @@ export class Game {
   }
 
   /** Пока верёвка тянет персонажа, ввод в движении не участвует: иначе двое правят одну скорость. */
-  private updateMovement(): void {
-    const grapple = this.grapple.update();
+  private updateMovement(deltaSeconds: number): void {
+    const grapple = this.grapple.update(deltaSeconds);
 
     if (grapple === GrappleState.Arrived) {
       this.retireThrow();

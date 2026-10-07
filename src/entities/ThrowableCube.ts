@@ -10,7 +10,7 @@ import type { Scene } from "@babylonjs/core/scene";
 
 import { GameConfig } from "../core/GameConfig";
 import { BodyTeleport } from "../physics/BodyTeleport";
-import { CollisionGroup } from "../physics/CollisionGroup";
+import { CollisionGroup, ENVIRONMENT_GROUPS } from "../physics/CollisionGroup";
 
 /**
  * Куб на верёвке — он в игре один: верёвка тоже одна, а после рывка куб уходит со сцены.
@@ -39,6 +39,10 @@ export class ThrowableCube {
 
     this.aggregate = new PhysicsAggregate(this.mesh, PhysicsShapeType.BOX, body, scene);
     this.aggregate.shape.filterMembershipMask = CollisionGroup.Cube;
+    // Куб живёт только для окружения. С персонажем он не сталкивается намеренно: в полёте
+    // он от него улетает, а примёрзший у кромки торчит над уступом и перекрывал бы заход —
+    // персонаж упирался бы в собственный крюк вместо того, чтобы пройти над ним.
+    this.aggregate.shape.filterCollideMask = ENVIRONMENT_GROUPS;
     // Без этого тело не присылает события столкновений.
     this.aggregate.body.setCollisionCallbackEnabled(true);
 
