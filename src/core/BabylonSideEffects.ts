@@ -9,9 +9,6 @@
  * Модуль импортируется первым в main.ts. Новую ловушку добавлять сюда, а не по месту.
  */
 
-// Mesh.createInstance (пул бросаемых кубов)
-import "@babylonjs/core/Meshes/instancedMesh";
-
 // Mesh.thinInstance* (пунктир траектории)
 import "@babylonjs/core/Meshes/thinInstanceMesh";
 

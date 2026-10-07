@@ -4,6 +4,11 @@
 // и не попал в production-сборку, где анимаций нет.
 import "@babylonjs/core/Animations/animatable";
 import "@babylonjs/core/Engines/Extensions/engine.query";
+import "@babylonjs/core/PostProcesses/RenderPipeline/postProcessRenderPipelineManagerSceneComponent";
+// Проводник сцены заводит секцию «Sprite Managers» безусловно и подписывается на
+// scene.onNewSpriteManagerAddedObservable без проверки на undefined. Спрайтов в игре нет,
+// но без этого модуля обсервабла не существует и падает всё дерево целиком.
+import "@babylonjs/core/Sprites/spriteSceneComponent";
 import type { InspectorToken } from "@babylonjs/inspector";
 import type { Scene } from "@babylonjs/core/scene";
 
