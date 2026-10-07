@@ -67,8 +67,6 @@ export interface WallConfig {
 export interface ThrowableConfig {
   readonly size: number;
   readonly color: Color3;
-  /** Сколько кубов одновременно в мире; при превышении переиспользуется самый старый. */
-  readonly poolSize: number;
   /** Горизонтальная скорость броска, м/с. */
   readonly speed: number;
   /** Вертикальная скорость броска, м/с: даёт дугу. */
@@ -221,7 +219,6 @@ export const GameConfig: SceneConfig = {
   throwable: {
     size: 0.5,
     color: new Color3(0.95, 0.78, 0.3),
-    poolSize: 12,
     speed: 40,
     lift: 3,
     cooldown: 0.2,

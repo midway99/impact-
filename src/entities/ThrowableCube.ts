@@ -1,5 +1,6 @@
+import { StandardMaterial } from "@babylonjs/core/Materials/standardMaterial";
 import { Vector3 } from "@babylonjs/core/Maths/math.vector";
-import type { InstancedMesh } from "@babylonjs/core/Meshes/instancedMesh";
+import { CreateBox } from "@babylonjs/core/Meshes/Builders/boxBuilder";
 import type { Mesh } from "@babylonjs/core/Meshes/mesh";
 import { PhysicsMotionType, PhysicsShapeType } from "@babylonjs/core/Physics/v2/IPhysicsEnginePlugin";
 import { PhysicsAggregate } from "@babylonjs/core/Physics/v2/physicsAggregate";
@@ -12,25 +13,31 @@ import { BodyTeleport } from "../physics/BodyTeleport";
 import { CollisionGroup } from "../physics/CollisionGroup";
 
 /**
- * Куб из пула: инстанс общего меша + своё тело.
- * Не удаляется из мира, а «паркуется»: статичное тело под полом, меш скрыт.
+ * Куб на верёвке — он в игре один: верёвка тоже одна, а после рывка куб уходит со сцены.
+ *
+ * Между броском и броском не удаляется, а «паркуется»: статичное тело под полом, меш скрыт.
+ * Следующий бросок переиспользует его же, поэтому в кадре не появляется ни одного `new`.
  */
 export class ThrowableCube {
-  private readonly mesh: InstancedMesh;
+  private readonly mesh: Mesh;
+  private readonly material: StandardMaterial;
   private readonly aggregate: PhysicsAggregate;
   private readonly physics: HavokPlugin;
 
-  public constructor(source: Mesh, index: number, physics: HavokPlugin, scene: Scene) {
+  public constructor(scene: Scene, physics: HavokPlugin) {
+    const { size, color, body } = GameConfig.throwable;
     this.physics = physics;
 
-    this.mesh = source.createInstance(`throwable-cube-${index}`);
-    this.mesh.position.copyFrom(GameConfig.parkPosition);
-    this.aggregate = new PhysicsAggregate(
-      this.mesh,
-      PhysicsShapeType.BOX,
-      GameConfig.throwable.body,
-      scene,
-    );
+    this.mesh = CreateBox("throwable-cube", { size }, scene);
+    this.material = new StandardMaterial("throwable-cube-material", scene);
+    this.material.diffuseColor = color;
+    this.mesh.material = this.material;
+    // Куб появляется только после броска, и его шейдер собрался бы прямо в этот момент —
+    // просадкой кадра на ровном месте. Собираем заранее, как и у верёвки.
+    this.material.forceCompilation(this.mesh);
+    this.material.freeze();
+
+    this.aggregate = new PhysicsAggregate(this.mesh, PhysicsShapeType.BOX, body, scene);
     this.aggregate.shape.filterMembershipMask = CollisionGroup.Cube;
     // Без этого тело не присылает события столкновений.
     this.aggregate.body.setCollisionCallbackEnabled(true);
@@ -63,6 +70,7 @@ export class ThrowableCube {
 
   public dispose(): void {
     this.aggregate.dispose();
+    this.material.dispose();
     this.mesh.dispose();
   }
 }

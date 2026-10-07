@@ -1,23 +1,23 @@
 import { GameConfig } from "../core/GameConfig";
-import type { CubePool } from "../entities/CubePool";
 import type { Rope } from "../entities/Rope";
+import type { ThrowableCube } from "../entities/ThrowableCube";
 import { KeyBinding } from "./KeyBinding";
 import type { KeyboardState } from "./KeyboardState";
 import type { ThrowAim } from "./ThrowAim";
 
-/** Бросок куба на верёвке по клавише: параметры берёт из прицела, сам куб — из пула. */
+/** Бросок куба на верёвке по клавише: параметры берёт из прицела. */
 export class ThrowController {
   private readonly keyboard: KeyboardState;
   private readonly aim: ThrowAim;
-  private readonly cubes: CubePool;
+  private readonly cube: ThrowableCube;
   private readonly rope: Rope;
 
   private cooldownLeft = 0;
 
-  public constructor(keyboard: KeyboardState, aim: ThrowAim, cubes: CubePool, rope: Rope) {
+  public constructor(keyboard: KeyboardState, aim: ThrowAim, cube: ThrowableCube, rope: Rope) {
     this.keyboard = keyboard;
     this.aim = aim;
-    this.cubes = cubes;
+    this.cube = cube;
     this.rope = rope;
   }
 
@@ -32,10 +32,8 @@ export class ThrowController {
 
   private throwCube(): void {
     const { origin, velocity } = this.aim;
-    const cube = this.cubes.launchNext(origin, velocity);
 
-    if (cube) {
-      this.rope.launch(origin, velocity, cube);
-    }
+    this.cube.launch(origin, velocity);
+    this.rope.launch(origin, velocity, this.cube.body);
   }
 }

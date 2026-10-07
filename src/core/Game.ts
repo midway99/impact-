@@ -7,11 +7,11 @@ import { RopeModel } from "../effects/RopeModel";
 import { RopeRenderer } from "../effects/RopeRenderer";
 import type { RopeShape } from "../effects/RopeShape";
 import { TrajectoryPreview } from "../effects/TrajectoryPreview";
-import { CubePool } from "../entities/CubePool";
 import { Grapple, GrappleState } from "../entities/Grapple";
 import { Player } from "../entities/Player";
 import { Rope } from "../entities/Rope";
 import { TargetWall } from "../entities/TargetWall";
+import { ThrowableCube } from "../entities/ThrowableCube";
 import { KeyboardState } from "../input/KeyboardState";
 import { PlayerController } from "../input/PlayerController";
 import { ThrowAim } from "../input/ThrowAim";
@@ -38,7 +38,7 @@ export class Game {
   private readonly player: Player;
   private readonly view: FirstPersonCamera;
   private readonly wall: TargetWall;
-  private readonly cubes: CubePool;
+  private readonly cube: ThrowableCube;
   private readonly freezer: ImpactFreezer;
   private readonly rope: Rope;
   private readonly ropeView: RopeRenderer;
@@ -104,7 +104,7 @@ export class Game {
     this.player.setVisible(false);
     this.view = new FirstPersonCamera(this.scene, canvas, this.player);
     this.wall = new TargetWall(this.scene);
-    this.cubes = new CubePool(this.scene, physics);
+    this.cube = new ThrowableCube(this.scene, physics);
     this.freezer = new ImpactFreezer(physics);
     this.rope = new Rope(this.player, this.createRopeColliders());
     this.ropeView = new RopeRenderer(this.scene, this.rope, ropeShape);
@@ -114,7 +114,7 @@ export class Game {
     this.movement = new PlayerController(camera, this.player, this.keyboard, this.rope);
     this.grapple = new Grapple(this.player, this.rope);
     this.aim = new ThrowAim(camera, this.player);
-    this.throwing = new ThrowController(this.keyboard, this.aim, this.cubes, this.rope);
+    this.throwing = new ThrowController(this.keyboard, this.aim, this.cube, this.rope);
     this.trajectory = new TrajectoryPreview(this.scene, physics, this.aim);
   }
 
@@ -160,11 +160,11 @@ export class Game {
   }
 
   /**
-   * Рывок закончен: куб уходит в пул, верёвка отпускает крепление.
+   * Рывок закончен: куб уходит со сцены, верёвка отпускает крепление.
    * Дальше `RopeRenderer` сам перестаёт её рисовать, а решатель — считать.
    */
   private retireThrow(): void {
-    this.cubes.parkActive();
+    this.cube.park();
     this.rope.release();
     // Верёвка рисуется до игровой логики: не обнови её здесь — продержится на экране лишний кадр.
     this.ropeView.update();
@@ -202,7 +202,7 @@ export class Game {
     this.trajectory.dispose();
     this.view.dispose();
     this.ropeView.dispose();
-    this.cubes.dispose();
+    this.cube.dispose();
     this.wall.dispose();
     this.player.dispose();
     this.arena.dispose();
