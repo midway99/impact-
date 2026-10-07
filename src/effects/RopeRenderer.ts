@@ -86,7 +86,9 @@ export class RopeRenderer {
     this.mesh = new Mesh("rope", scene);
     this.buildGeometry();
     this.mesh.isPickable = false;
-    this.mesh.isVisible = false;
+    // До первого броска верёвки нет. Выключенный меш отсекается до расчёта мировой матрицы
+    // и отбора активных мешей, невидимый — проходит их каждый кадр.
+    this.mesh.setEnabled(false);
     // Габариты пересчитываются не каждый кадр — без этого верёвку отсекает frustum culling.
     this.mesh.alwaysSelectAsActiveMesh = true;
 
@@ -133,7 +135,7 @@ export class RopeRenderer {
 
   public update(): void {
     if (!this.rope.isActive) {
-      this.mesh.isVisible = false;
+      this.mesh.setEnabled(false);
       return;
     }
     if (this.renderedRevision === this.rope.revision) {
@@ -146,7 +148,7 @@ export class RopeRenderer {
 
     this.mesh.updateVerticesData(VertexBuffer.PositionKind, this.positions, false, false);
     this.mesh.updateVerticesData(VertexBuffer.NormalKind, this.normals, false, false);
-    this.mesh.isVisible = true;
+    this.mesh.setEnabled(true);
     this.renderedRevision = this.rope.revision;
   }
 

@@ -50,18 +50,26 @@ export class ThrowableCube {
   }
 
   public launch(position: Vector3, velocity: Vector3): void {
+    this.mesh.setEnabled(true);
+    this.aggregate.shape.filterMembershipMask = CollisionGroup.Cube;
     this.aggregate.body.setMotionType(PhysicsMotionType.DYNAMIC);
     this.placeAt(position);
     this.aggregate.body.setLinearVelocity(velocity);
     this.aggregate.body.setAngularVelocity(Vector3.ZeroReadOnly);
-    this.mesh.isVisible = true;
   }
 
-  /** Вывод из игры без dispose: тело остаётся в мире Havok, но статичное и под полом. */
+  /**
+   * Вывод из игры без dispose: куб свою роль отыграл, но ждёт следующего броска.
+   *
+   * Статичное тело Havok не интегрирует и не синхронизирует с узлом — `setMotionType`
+   * сам ставит `disableSync`. Нулевая маска убирает куб из столкновений, а выключенный
+   * узел отсекается до расчёта мировой матрицы, в отличие от просто невидимого.
+   */
   public park(): void {
     this.aggregate.body.setMotionType(PhysicsMotionType.STATIC);
     this.placeAt(GameConfig.parkPosition);
-    this.mesh.isVisible = false;
+    this.aggregate.shape.filterMembershipMask = 0;
+    this.mesh.setEnabled(false);
   }
 
   private placeAt(position: Vector3): void {
