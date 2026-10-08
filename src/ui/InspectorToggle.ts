@@ -4,6 +4,9 @@
 // и не попал в production-сборку, где анимаций нет.
 import "@babylonjs/core/Animations/animatable";
 import "@babylonjs/core/Engines/Extensions/engine.query";
+// Вкладка производительности зовёт scene.getPerfCollector, а в ядре это заглушка,
+// бросающая _WarnImport: сам сборщик метрик приходит отсюда.
+import "@babylonjs/core/Misc/PerformanceViewer/performanceViewerSceneExtension";
 import "@babylonjs/core/PostProcesses/RenderPipeline/postProcessRenderPipelineManagerSceneComponent";
 // Проводник сцены заводит секцию «Sprite Managers» безусловно и подписывается на
 // scene.onNewSpriteManagerAddedObservable без проверки на undefined. Спрайтов в игре нет,
