@@ -5,7 +5,8 @@ import { GameConfig } from "../../core/GameConfig";
 /**
  * Рабочая длина верёвки: сколько её сейчас в деле.
  *
- * Пока куб летит, верёвка размотана целиком. Как только он примёрз, длина подтягивается
+ * Потолок задаёт бросок: слабый стравливает несколько метров, полный заряд — всю верёвку.
+ * Пока куб летит, размотано ровно столько. Как только он примёрз, длина подтягивается
  * до расстояния до него с небольшим запасом — провисать становится нечему, и рывок идёт
  * на натянутой верёвке. Отойдёт персонаж дальше — длина так же стравится обратно,
  * до полной и не больше.
@@ -15,6 +16,8 @@ import { GameConfig } from "../../core/GameConfig";
  */
 export class RopeTension {
   private current = GameConfig.rope.length;
+  /** Сколько верёвки стравлено на этот бросок: потолок, выше которого длина не отходит. */
+  private payout = GameConfig.rope.length;
   private attached = false;
 
   /** Длина верёвки в метрах на этот кадр. */
@@ -22,9 +25,10 @@ export class RopeTension {
     return this.current;
   }
 
-  /** Бросок: верёвка снова размотана целиком. */
-  public reset(): void {
-    this.current = GameConfig.rope.length;
+  /** Бросок: верёвка размотана ровно на столько, сколько стравил заряд. */
+  public reset(payout: number): void {
+    this.payout = payout;
+    this.current = payout;
     this.attached = false;
   }
 
@@ -33,11 +37,11 @@ export class RopeTension {
    * только что зацепилась: в этот момент её мало укоротить, её надо ещё и выпрямить.
    */
   public update(stepSeconds: number, hand: Vector3, attachment: Vector3 | null): boolean {
-    const { length, slack, reelSpeed } = GameConfig.rope;
+    const { slack, reelSpeed } = GameConfig.rope;
     const target =
       attachment === null
-        ? length
-        : Math.min(length, Vector3.Distance(hand, attachment) * (1 + slack));
+        ? this.payout
+        : Math.min(this.payout, Vector3.Distance(hand, attachment) * (1 + slack));
     // Касание — событие, а не процесс: персонаж прилетает быстрее, чем верёвка успела бы
     // выбрать метры запаса, и постепенная подтяжка оставила бы весь рывок на провисе.
     const caught = attachment !== null && !this.attached;

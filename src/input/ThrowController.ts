@@ -77,6 +77,6 @@ export class ThrowController {
     const { origin, velocity } = this.aim;
 
     this.cube.launch(origin, velocity);
-    this.rope.launch(origin, velocity, this.cube.body);
+    this.rope.launch(origin, velocity, this.cube.body, this.power);
   }
 }

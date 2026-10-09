@@ -86,8 +86,11 @@ export class Rope {
     this.particles.readToRef(this.particles.position, index, result);
   }
 
-  /** Бросок: частицы выстраиваются от руки до точки вылета и летят вслед за кубом. */
-  public launch(origin: Vector3, velocity: Vector3, target: PhysicsBody): void {
+  /**
+   * Бросок: частицы выстраиваются от руки до точки вылета и летят вслед за кубом.
+   * `power` — заряд броска 0..1: он же решает, сколько верёвки стравить.
+   */
+  public launch(origin: Vector3, velocity: Vector3, target: PhysicsBody, power: number): void {
     const { position, previous, velocity: velocities } = this.particles;
 
     this.anchorToRef(this.anchorTo);
@@ -104,8 +107,10 @@ export class Rope {
       this.particles.write(velocities, i, this.velocity);
     }
 
+    const { length, minPayout } = GameConfig.rope;
+
     this.target = target;
-    this.tension.reset();
+    this.tension.reset(minPayout + (length - minPayout) * power);
     this.stateRevision++;
   }
 
