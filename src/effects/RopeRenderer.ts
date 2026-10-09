@@ -46,6 +46,9 @@ export class RopeRenderer {
 
   private readonly positions: Float32Array;
   private readonly normals: Float32Array;
+  private readonly sampleLow: Uint16Array;
+  private readonly sampleHigh: Uint16Array;
+  private readonly sampleBlend: Float32Array;
   /** Сглаженный путь: те же объекты каждый кадр. */
   private readonly path: readonly Vector3[];
   /** Длина дуги до каждой точки пути — по ней идёт выпуклость прядей. */
@@ -82,6 +85,10 @@ export class RopeRenderer {
 
     this.positions = new Float32Array(this.shape.vertexCount * AXIS);
     this.normals = new Float32Array(this.shape.vertexCount * AXIS);
+    this.sampleLow = new Uint16Array(this.shape.vertexCount);
+    this.sampleHigh = new Uint16Array(this.shape.vertexCount);
+    this.sampleBlend = new Float32Array(this.shape.vertexCount);
+    this.cacheVertexSamples();
 
     this.mesh = new Mesh("rope", scene);
     this.buildGeometry();
@@ -108,6 +115,19 @@ export class RopeRenderer {
     }
 
     return path;
+  }
+
+  private cacheVertexSamples(): void {
+    const last = this.points - 1;
+
+    for (let i = 0; i < this.shape.vertexCount; i++) {
+      const position = this.shape.along[i]! * last;
+      const low = Math.min(Math.floor(position), this.points - 2);
+
+      this.sampleLow[i] = low;
+      this.sampleHigh[i] = low + 1;
+      this.sampleBlend[i] = position - low;
+    }
   }
 
   private createMaterial(scene: Scene, twists: number): StandardMaterial {
@@ -209,11 +229,10 @@ export class RopeRenderer {
 
   /** Каждая вершина модели переносится в систему координат своей точки кривой. */
   private deform(): void {
-    const { along, cross, normals, vertexCount } = this.shape;
-    const last = this.points - 1;
+    const { cross, normals, vertexCount } = this.shape;
 
     for (let i = 0; i < vertexCount; i++) {
-      this.sampleAt(along[i]! * last);
+      this.sampleAt(i);
 
       const at = i * AXIS;
       const u = cross[i * CROSS]!;
@@ -235,10 +254,10 @@ export class RopeRenderer {
   }
 
   /** Точка и оси кривой на дробной позиции: между соседними опорными точками — линейно. */
-  private sampleAt(position: number): void {
-    const low = Math.min(Math.floor(position), this.points - 2);
-    const high = low + 1;
-    const t = position - low;
+  private sampleAt(vertex: number): void {
+    const low = this.sampleLow[vertex]!;
+    const high = this.sampleHigh[vertex]!;
+    const t = this.sampleBlend[vertex]!;
 
     Vector3.LerpToRef(this.path[low]!, this.path[high]!, t, this.centre);
     this.sampledDistance = this.distances[low]! + (this.distances[high]! - this.distances[low]!) * t;

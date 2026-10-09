@@ -7,8 +7,19 @@ import type { RopeCollider } from "./RopeCollider";
 import type { SelfCollision } from "./SelfCollision";
 
 const ANCHOR = 0;
-/** Доля толщины, которую частица может пройти за подшаг (Мюллер, 15-selfCollision): защита от туннелирования. */
-const MAX_TRAVEL_PER_STEP = 0.2;
+/**
+ * Какую долю звена частица может пройти за подшаг: защита от туннелирования (Мюллер,
+ * 15-selfCollision) и от выворачивания цепочки наизнанку.
+ *
+ * У Мюллера предел берётся от толщины ткани, но здесь это давало 0.02 м за подшаг, то есть
+ * 12 м/с при 60 кадрах. Верёвка не успевала за брошенным кубом, жёсткое звено тормозило его
+ * до своей скорости, и бросок упирался в этот предел вместо длины верёвки. От звена предел
+ * выходит на порядок выше и в игровых скоростях уже не участвует.
+ *
+ * Пол это не задевает: `GroundCollider` проверяет полупространство, а не тонкую плёнку,
+ * и частицу ниже поверхности ловит с любой скоростью.
+ */
+const MAX_TRAVEL_PER_STEP = 0.5;
 
 /**
  * XPBD-решатель верёвки по схеме Ten Minute Physics (14-cloth, 15-selfCollision):
@@ -76,7 +87,7 @@ export class RopeSolver {
   }
 
   private maxSpeed(dt: number): number {
-    return (MAX_TRAVEL_PER_STEP * GameConfig.rope.radius * 2) / dt;
+    return (MAX_TRAVEL_PER_STEP * this.fullSegment) / dt;
   }
 
   /** v += g·dt; prev = x; x += v·dt. */

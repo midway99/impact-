@@ -7,7 +7,10 @@ import type { Player } from "../entities/Player";
 
 /**
  * Прицел броска: точка вылета и начальная скорость куба на текущий кадр.
+ *
  * Единый источник для самого броска и для превью траектории — они не могут разойтись.
+ * Поэтому заряд достаточно учесть здесь: пунктир вытягивается по мере удержания сам,
+ * и игрок видит ровно ту дугу, по которой куб и полетит.
  */
 export class ThrowAim {
   private readonly camera: Camera;
@@ -30,8 +33,10 @@ export class ThrowAim {
     return this.launchVelocity;
   }
 
-  public update(): void {
-    const { speed, lift, spawnForward, spawnHeight } = GameConfig.throwable;
+  /** `power` — заряд броска, 0..1: 0 даёт `minSpeed`, 1 — `maxSpeed`. */
+  public update(power: number): void {
+    const { minSpeed, maxSpeed, lift, spawnForward, spawnHeight } = GameConfig.throwable;
+    const speed = minSpeed + (maxSpeed - minSpeed) * power;
 
     // Направление взгляда целиком: смотришь вверх — куб летит выше, вниз — под ноги.
     this.camera.getDirectionToRef(Axis.Z, this.forward);

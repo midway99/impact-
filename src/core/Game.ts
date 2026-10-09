@@ -22,6 +22,8 @@ import { ImpactFreezer } from "../physics/ImpactFreezer";
 import type { RopeCollider } from "../physics/rope/RopeCollider";
 import { Arena } from "../scene/Arena";
 import { FirstPersonCamera } from "../scene/FirstPersonCamera";
+import { ChargeGauge } from "../ui/ChargeGauge";
+import { FpsCounter } from "../ui/FpsCounter";
 import { GameConfig } from "./GameConfig";
 
 const MS_PER_SECOND = 1000;
@@ -48,6 +50,8 @@ export class Game {
   private readonly aim: ThrowAim;
   private readonly throwing: ThrowController;
   private readonly trajectory: TrajectoryPreview;
+  private readonly fps: FpsCounter;
+  private readonly chargeGauge: ChargeGauge;
   /** Инструмент разработки: подключается динамически и только в dev-режиме. */
   private inspector?: { update(): void; dispose(): void };
 
@@ -116,6 +120,8 @@ export class Game {
     this.aim = new ThrowAim(camera, this.player);
     this.throwing = new ThrowController(this.keyboard, this.aim, this.cube, this.rope);
     this.trajectory = new TrajectoryPreview(this.scene, physics, this.aim);
+    this.fps = new FpsCounter(this.engine, document.body);
+    this.chargeGauge = new ChargeGauge(document.body);
   }
 
   /** Инспектор Babylon (клавиша ~) живёт только в разработке: в сборку он не попадает. */
@@ -141,9 +147,13 @@ export class Game {
   private tick(deltaSeconds: number): void {
     this.view.update();
     this.updateMovement(deltaSeconds);
-    this.aim.update();
+    // Прицел строится по заряду прошлого кадра. На кадре отпускания заряд уже не растёт,
+    // поэтому бросок уходит ровно по той дуге, которую игрок видел.
+    this.aim.update(this.throwing.power);
     this.throwing.update(deltaSeconds);
+    this.chargeGauge.update(this.throwing.power, this.throwing.isCharging);
     this.trajectory.update();
+    this.fps.update(deltaSeconds);
     this.inspector?.update();
   }
 
@@ -196,8 +206,10 @@ export class Game {
     this.scene.onBeforeRenderObservable.removeCallback(this.update);
     this.scene.onAfterPhysicsObservable.removeCallback(this.afterPhysics);
     this.engine.stopRenderLoop(this.renderFrame);
+    this.chargeGauge.dispose();
     this.keyboard.dispose();
     this.inspector?.dispose();
+    this.fps.dispose();
     this.freezer.dispose();
     this.trajectory.dispose();
     this.view.dispose();

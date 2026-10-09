@@ -1,4 +1,4 @@
-import { Color3 } from "@babylonjs/core/Maths/math.color";
+﻿import { Color3 } from "@babylonjs/core/Maths/math.color";
 import { Vector3 } from "@babylonjs/core/Maths/math.vector";
 
 import { CollisionGroup } from "../physics/CollisionGroup";
@@ -67,8 +67,12 @@ export interface WallConfig {
 export interface ThrowableConfig {
   readonly size: number;
   readonly color: Color3;
-  /** Горизонтальная скорость броска, м/с. */
-  readonly speed: number;
+  /** Скорость броска без удержания — короткий навес под ноги, м/с. */
+  readonly minSpeed: number;
+  /** Скорость броска при полном заряде, м/с. */
+  readonly maxSpeed: number;
+  /** За сколько секунд удержания заряд доходит до полного, с. */
+  readonly chargeSeconds: number;
   /** Вертикальная скорость броска, м/с: даёт дугу. */
   readonly lift: number;
   /** Пауза между бросками, с. */
@@ -115,6 +119,11 @@ export interface GrappleConfig {
    * запасом: на скорости рывка этого времени хватает на путь длиннее всей верёвки.
    */
   readonly maxPullSeconds: number;
+}
+
+export interface HudConfig {
+  /** Как часто обновлять текст FPS, с. */
+  readonly fpsUpdateInterval: number;
 }
 
 export interface RopeConfig {
@@ -189,6 +198,7 @@ export interface SceneConfig {
   readonly trajectory: TrajectoryConfig;
   readonly rope: RopeConfig;
   readonly grapple: GrappleConfig;
+  readonly hud: HudConfig;
 }
 
 /** Единственный источник констант сцены: в коде «магических» чисел быть не должно. */
@@ -237,7 +247,9 @@ export const GameConfig: SceneConfig = {
   throwable: {
     size: 0.5,
     color: new Color3(0.95, 0.78, 0.3),
-    speed: 40,
+    minSpeed: 8,
+    maxSpeed: 24,
+    chargeSeconds: 0.7,
     lift: 3,
     cooldown: 0.2,
     spawnForward: 1.1,
@@ -260,18 +272,21 @@ export const GameConfig: SceneConfig = {
     ledgeClearance: 0.3,
     maxPullSeconds: 2,
   },
+  hud: {
+    fpsUpdateInterval: 0.1,
+  },
   rope: {
     particleCount: 48,
-    length: 15.5,
+    length: 10.5,
     slack: 0.08,
     reelSpeed: 25,
     substeps: 10,
     radius: 0.05,
-    selfDistance: 0.05,
+    selfDistance: 0,
     thickness: 0.05,
     smoothing: 2,
     tessellation: 8,
-    modelSections: 97,
+    modelSections: 49,
     particleMass: 0.02,
     stretchCompliance: 0,
     // Трос гнётся втрое неохотнее верёвки. Меньше делать нельзя: изгиб начинает
