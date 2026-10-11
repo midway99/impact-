@@ -17,7 +17,7 @@ body {
 }
 
 /*
- * Кольцо-прицел в центре экрана: пустое показывает направление, дуга внутри — заряд броска.
+ * Кольцо силы броска в центре экрана: появляется на нажатие клавиши, дуга внутри — заряд.
  * Развёрнуто на -90°, иначе дуга росла бы не сверху, а справа.
  */
 .charge-gauge {
@@ -28,8 +28,14 @@ body {
   width: 44px;
   height: 44px;
   margin: -22px 0 0 -22px;
+  opacity: 0;
   pointer-events: none;
   transform: rotate(-90deg);
+  transition: opacity 110ms ease-out;
+}
+
+.charge-gauge.is-visible {
+  opacity: 1;
 }
 
 .charge-gauge__track,
