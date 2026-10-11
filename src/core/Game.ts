@@ -6,7 +6,6 @@ import { Scene } from "@babylonjs/core/scene";
 import { RopeModel } from "../effects/RopeModel";
 import { RopeRenderer } from "../effects/RopeRenderer";
 import type { RopeShape } from "../effects/RopeShape";
-import { TrajectoryPreview } from "../effects/TrajectoryPreview";
 import { Grapple, GrappleState } from "../entities/Grapple";
 import { Player } from "../entities/Player";
 import { Rope } from "../entities/Rope";
@@ -49,7 +48,6 @@ export class Game {
   private readonly grapple: Grapple;
   private readonly aim: ThrowAim;
   private readonly throwing: ThrowController;
-  private readonly trajectory: TrajectoryPreview;
   private readonly fps: FpsCounter;
   private readonly chargeGauge: ChargeGauge;
   /** Инструмент разработки: подключается динамически и только в dev-режиме. */
@@ -119,7 +117,6 @@ export class Game {
     this.grapple = new Grapple(this.player, this.rope, this.freezer);
     this.aim = new ThrowAim(camera, this.player);
     this.throwing = new ThrowController(this.keyboard, this.aim, this.cube, this.rope);
-    this.trajectory = new TrajectoryPreview(this.scene, physics, this.aim);
     this.fps = new FpsCounter(this.engine, document.body);
     this.chargeGauge = new ChargeGauge(document.body);
   }
@@ -152,7 +149,6 @@ export class Game {
     this.aim.update(this.throwing.power);
     this.throwing.update(deltaSeconds);
     this.chargeGauge.update(this.throwing.power, this.throwing.isCharging);
-    this.trajectory.update();
     this.fps.update(deltaSeconds);
     this.inspector?.update();
   }
@@ -211,7 +207,6 @@ export class Game {
     this.inspector?.dispose();
     this.fps.dispose();
     this.freezer.dispose();
-    this.trajectory.dispose();
     this.view.dispose();
     this.ropeView.dispose();
     this.cube.dispose();

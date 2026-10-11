@@ -87,15 +87,6 @@ export interface ThrowableConfig {
   readonly body: BodyConfig;
 }
 
-export interface TrajectoryConfig {
-  /** Максимум точек пунктира; дуга обрывается раньше на первом препятствии. */
-  readonly dotCount: number;
-  readonly dotRadius: number;
-  /** Шаг по времени между соседними точками, с. */
-  readonly timeStep: number;
-  readonly color: Color3;
-}
-
 export interface GrappleConfig {
   /** Скорость полёта к месту крепления, м/с. */
   readonly speed: number;
@@ -202,7 +193,6 @@ export interface SceneConfig {
   readonly player: PlayerConfig;
   readonly wall: WallConfig;
   readonly throwable: ThrowableConfig;
-  readonly trajectory: TrajectoryConfig;
   readonly rope: RopeConfig;
   readonly grapple: GrappleConfig;
   readonly hud: HudConfig;
@@ -264,12 +254,6 @@ export const GameConfig: SceneConfig = {
     impactImpulseThreshold: 1,
     freezeOnGroups: CollisionGroup.Wall,
     body: { mass: 1, friction: 0.6, restitution: 0.2 },
-  },
-  trajectory: {
-    dotCount: 40,
-    dotRadius: 0.06,
-    timeStep: 0.04,
-    color: new Color3(1, 0.9, 0.45),
   },
   grapple: {
     speed: 18,

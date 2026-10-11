@@ -1,6 +1,5 @@
 const SVG_NS = "http://www.w3.org/2000/svg";
 const GAUGE_CLASS = "charge-gauge";
-const VISIBLE_CLASS = "is-visible";
 const FULL_CLASS = "is-full";
 /** Нормированная длина дуги: заполнение задаётся прямо в процентах. */
 const TRACK_LENGTH = 100;
@@ -10,19 +9,18 @@ const RING_CENTRE = 50;
 const RING_RADIUS = 42;
 
 /**
- * Кольцо силы броска рядом с прицелом: заполняется, пока игрок держит клавишу.
+ * Кольцо-прицел в центре экрана: пустое кольцо показывает, куда смотришь,
+ * а дуга внутри него заполняется, пока игрок держит клавишу броска.
  *
  * SVG в DOM, а не Babylon GUI: HUD здесь и так на DOM, и ради одной дуги тянуть
  * зависимость незачем. Геометрия кольца нормирована через `pathLength`, поэтому
- * размер, отступ и цвета живут целиком в CSS — отсюда идут только заполнение
- * и два состояния.
+ * размер и цвета живут целиком в CSS — отсюда идёт только заполнение.
  */
 export class ChargeGauge {
   private readonly root: SVGSVGElement;
   private readonly fill: SVGCircleElement;
 
   private step = -1;
-  private visible = false;
   private full = false;
 
   public constructor(parent: HTMLElement) {
@@ -56,28 +54,16 @@ export class ChargeGauge {
    * Вызывается каждый кадр, поэтому в DOM пишет только при настоящем изменении.
    */
   public update(power: number, charging: boolean): void {
-    if (charging !== this.visible) {
-      this.visible = charging;
-      this.root.classList.toggle(VISIBLE_CLASS, charging);
-      // Скрытое кольцо гасим и по цвету: иначе следующий набор начнётся «полным».
-      if (!charging) {
-        this.full = false;
-        this.root.classList.remove(FULL_CLASS);
-      }
-    }
-
-    if (!charging) {
-      return;
-    }
-
-    const step = Math.round(power * STEPS);
+    // Вне набора дуга пустая: остаётся голое кольцо, то есть прицел.
+    const filled = charging ? power : 0;
+    const step = Math.round(filled * STEPS);
 
     if (step !== this.step) {
       this.step = step;
       this.fill.style.strokeDashoffset = String(TRACK_LENGTH - (TRACK_LENGTH * step) / STEPS);
     }
 
-    const full = power >= 1;
+    const full = filled >= 1;
 
     if (full !== this.full) {
       this.full = full;
