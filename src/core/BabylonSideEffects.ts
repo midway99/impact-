@@ -9,9 +9,6 @@
  * Модуль импортируется первым в main.ts. Новую ловушку добавлять сюда, а не по месту.
  */
 
-// Mesh.thinInstance* (пунктир траектории)
-import "@babylonjs/core/Meshes/thinInstanceMesh";
-
 // scene.createPickingRay: нужен камере и пикингу под указателем
 import "@babylonjs/core/Culling/ray";
 

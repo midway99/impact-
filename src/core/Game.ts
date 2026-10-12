@@ -145,7 +145,7 @@ export class Game {
     this.view.update();
     this.updateMovement(deltaSeconds);
     // Прицел строится по заряду прошлого кадра. На кадре отпускания заряд уже не растёт,
-    // поэтому бросок уходит ровно по той дуге, которую игрок видел.
+    // поэтому бросок уходит ровно с той силой, которую показывало кольцо.
     this.aim.update(this.throwing.power);
     this.throwing.update(deltaSeconds);
     this.chargeGauge.update(this.throwing.power, this.throwing.isCharging);
